@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Take and Send Pictures</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Add Rally Events to your Default Calendar</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>

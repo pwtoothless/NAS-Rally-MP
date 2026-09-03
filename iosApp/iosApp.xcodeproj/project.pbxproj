@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4C740D3030475A2A00B12474 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 4C740D2F30475A2A00B12474 /* Auth */; };
+		4C740D3230475A2A00B12474 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 4C740D3130475A2A00B12474 /* Functions */; };
+		4C740D3430475A2A00B12474 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4C740D3330475A2A00B12474 /* PostgREST */; };
+		4C740D3630475A2A00B12474 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4C740D3530475A2A00B12474 /* Realtime */; };
+		4C740D3830475A2A00B12474 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4C740D3730475A2A00B12474 /* Storage */; };
+		4C740D3A30475A2A00B12474 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4C740D3930475A2A00B12474 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		B9217E2F9FF27B0648A2D644 /* NASRally.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NASRally.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -41,6 +50,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C740D3830475A2A00B12474 /* Storage in Frameworks */,
+				4C740D3230475A2A00B12474 /* Functions in Frameworks */,
+				4C740D3430475A2A00B12474 /* PostgREST in Frameworks */,
+				4C740D3030475A2A00B12474 /* Auth in Frameworks */,
+				4C740D3630475A2A00B12474 /* Realtime in Frameworks */,
+				4C740D3A30475A2A00B12474 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,6 +100,12 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				4C740D2F30475A2A00B12474 /* Auth */,
+				4C740D3130475A2A00B12474 /* Functions */,
+				4C740D3330475A2A00B12474 /* PostgREST */,
+				4C740D3530475A2A00B12474 /* Realtime */,
+				4C740D3730475A2A00B12474 /* Storage */,
+				4C740D3930475A2A00B12474 /* Supabase */,
 			);
 			productName = iosApp;
 			productReference = B9217E2F9FF27B0648A2D644 /* NASRally.app */;
@@ -114,6 +135,9 @@
 			);
 			mainGroup = 2D5B89C03569591B0F71057E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BE57F588FE09554F1A01FDA4 /* Products */;
 			projectDirPath = "";
@@ -176,7 +200,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				DEVELOPMENT_TEAM = K8LZ9X4DR7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = iosApp/Info.plist;
@@ -327,7 +351,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"iosApp/Preview Content\"";
-				DEVELOPMENT_TEAM = "${TEAM_ID}";
+				DEVELOPMENT_TEAM = K8LZ9X4DR7;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -372,6 +396,52 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+			traits = (
+			);
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4C740D2F30475A2A00B12474 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		4C740D3130475A2A00B12474 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		4C740D3330475A2A00B12474 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		4C740D3530475A2A00B12474 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		4C740D3730475A2A00B12474 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		4C740D3930475A2A00B12474 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C740D2E30475A2A00B12474 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = EBAD24A4B9D8CCB98BD4D236 /* Project object */;
 }
