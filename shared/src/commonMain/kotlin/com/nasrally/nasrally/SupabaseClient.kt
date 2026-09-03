@@ -1,0 +1,185 @@
+package com.nasrally.nasrally
+
+import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+val supabase = createSupabaseClient(
+    supabaseUrl = "http://24.16.3.100:8000",
+    supabaseKey = "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"
+) {
+    install(Auth)
+    install(Postgrest)
+    install(Realtime)
+    install(Storage)
+}
+
+suspend fun fetchCurrentProfile(): PersonInfo? {
+    val session = supabase.auth.currentSessionOrNull() ?: return null
+    val userId = session.user?.id ?: return null
+    return loadPersonInfo(userId)
+}
+
+suspend fun loadPersonInfo(userId: String): PersonInfo? {
+    return try {
+        val row = supabase.from("profiles")
+            .select {
+                filter {
+                    eq("id", userId)
+                }
+            }
+            .decodeSingleOrNull<SupabasePersonRow>()
+        row?.toPersonInfo()
+    } catch (e: Exception) {
+        println("Error loading person info: ${e.message}")
+        null
+    }
+}
+
+suspend fun loadPersonInfoOrCreateDefault(userId: String, name: String): PersonInfo {
+    val existing = loadPersonInfo(userId)
+    if (existing != null) return existing
+
+    val newPerson = NewSupabasePersonRow(
+        id = userId,
+        name = name,
+        theme = "Default",
+        bio = "",
+        ralliesJoined = 0,
+        rallieNames = emptyList(),
+        privligeLevel = "User",
+        tos = false
+    )
+
+    return try {
+        val inserted = supabase.from("profiles")
+            .upsert(newPerson) {
+                select()
+            }
+            .decodeSingle<SupabasePersonRow>()
+        inserted.toPersonInfo()
+    } catch (e: Exception) {
+        PersonInfo(id = userId, name = name)
+    }
+}
+
+suspend fun login(emailInput: String, passwordInput: String): AuthResult {
+    return try {
+        supabase.auth.signInWith(Email) {
+            email = emailInput
+            password = passwordInput
+        }
+        val user = supabase.auth.currentUserOrNull()
+            ?: return AuthResult.Failure("Failed to retrieve user after login.")
+        val userName = user.userMetadata?.get("name")?.toString() ?: emailInput
+        val personInfo = loadPersonInfoOrCreateDefault(user.id, userName)
+        AuthResult.Success(personInfo)
+    } catch (e: Exception) {
+        println("Login failed: ${e.message}")
+        AuthResult.Failure(e.message ?: "Login failed. Please check your credentials.")
+    }
+}
+
+suspend fun signup(nameInput: String, emailInput: String, passwordInput: String): AuthResult {
+    return try {
+        supabase.auth.signUpWith(Email) {
+            email = emailInput
+            password = passwordInput
+            data = buildJsonObject {
+                put("name", nameInput)
+            }
+        }
+        val user = supabase.auth.currentUserOrNull()
+            ?: return AuthResult.Failure("Signup successful, but user session is null.")
+
+        val newPerson = NewSupabasePersonRow(
+            id = user.id,
+            name = nameInput,
+            theme = "Dark",
+            bio = "",
+            ralliesJoined = 0,
+            rallieNames = emptyList(),
+            privligeLevel = "User",
+            tos = false
+        )
+
+        supabase.from("profiles").upsert(newPerson)
+        val personInfo = loadPersonInfo(user.id) ?: loadPersonInfoOrCreateDefault(user.id, nameInput)
+        AuthResult.Success(personInfo)
+    } catch (e: Exception) {
+        println("Signup failed: ${e.message}")
+        AuthResult.Failure(e.message ?: "Signup failed. Please try again.")
+    }
+}
+
+suspend fun logout() {
+    try {
+        supabase.auth.signOut()
+    } catch (e: Exception) {
+        println("Logout failed: ${e.message}")
+    }
+}
+
+suspend fun updateProfile(person: PersonInfo) {
+    if (person.isTestUser) return
+    val updateData = SupabaseProfileUpdateRow(
+        name = person.name,
+        bio = person.bio,
+        instaHandle = person.instaHandle,
+        carModel = person.carModel,
+        phoneNumber = person.phoneNumber
+    )
+    supabase.from("profiles")
+        .update(updateData) {
+            filter {
+                eq("id", person.id)
+            }
+        }
+}
+
+fun getProfileImageURL(userId: String): String {
+    return supabase.storage.from("Profile Pictures").publicUrl("$userId/images/profile.jpg")
+}
+
+fun getRallyImageURL(name: String): String {
+    return supabase.storage.from("RallyLogos").publicUrl("$name.png")
+}
+
+suspend fun fetchUserWaivers(userId: String): List<Waiver> {
+    return try {
+        supabase.from("waivers")
+            .select {
+                filter {
+                    eq("rallies.rally_participants.user_id", userId)
+                }
+            }
+            .decodeList<Waiver>()
+    } catch (e: Exception) {
+        println("Fetch waivers failed: ${e.message}")
+        emptyList()
+    }
+}
+
+suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
+    return try {
+        val rows = supabase.from("sensitiveInfo")
+            .select()
+            .decodeList<SensitiveInfoRow>()
+        rows.firstOrNull()
+    } catch (e: Exception) {
+        println("Error loading sensitive info: ${e.message}")
+        null
+    }
+}
+
+suspend fun saveSensitiveInfo(row: SensitiveInfoRow) {
+    supabase.from("sensitiveInfo").upsert(row)
+}
