@@ -31,34 +31,47 @@ import com.nasrally.nasrally.views.HomeView
 import com.nasrally.nasrally.views.RalliesView
 import com.nasrally.nasrally.views.SettingsView
 import com.nasrally.nasrally.views.WaversView
+import com.nasrally.nasrally.web.WebApp
 
 @Composable
 fun App() {
-    var personInfo by remember { mutableStateOf<PersonInfo?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
+    val platformName = getPlatform().name
+    val isWeb = platformName.contains("Web", ignoreCase = true) ||
+            platformName.contains("Chrome", ignoreCase = true) ||
+            platformName.contains("Firefox", ignoreCase = true) ||
+            platformName.contains("Safari", ignoreCase = true) ||
+            platformName.contains("Opera", ignoreCase = true) ||
+            platformName.contains("Edge", ignoreCase = true)
 
-    LaunchedEffect(Unit) {
-        try {
-            personInfo = fetchCurrentProfile()
-        } catch (e: Exception) {
-            println("No active session: ${e.message}")
-        } finally {
-            isLoading = false
-        }
-    }
-
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    } else if (personInfo != null) {
-        ContentView(
-            personInfo = personInfo!!,
-            onUpdatePerson = { personInfo = it },
-            onLogout = { personInfo = null }
-        )
+    if (isWeb) {
+        WebApp()
     } else {
-        AuthView(onLoginSuccess = { personInfo = it })
+        var personInfo by remember { mutableStateOf<PersonInfo?>(null) }
+        var isLoading by remember { mutableStateOf(true) }
+
+        LaunchedEffect(Unit) {
+            try {
+                personInfo = fetchCurrentProfile()
+            } catch (e: Exception) {
+                println("No active session: ${e.message}")
+            } finally {
+                isLoading = false
+            }
+        }
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (personInfo != null) {
+            ContentView(
+                personInfo = personInfo!!,
+                onUpdatePerson = { personInfo = it },
+                onLogout = { personInfo = null }
+            )
+        } else {
+            AuthView(onLoginSuccess = { personInfo = it })
+        }
     }
 }
 
