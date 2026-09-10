@@ -36,14 +36,16 @@ import com.nasrally.nasrally.web.WebApp
 @Composable
 fun App() {
     val platformName = getPlatform().name
-    val isWeb = platformName.contains("Web", ignoreCase = true) ||
+    val isLargeScreenPlatform = platformName.contains("Web", ignoreCase = true) ||
+            platformName.contains("Java", ignoreCase = true) ||
+            platformName.contains("JVM", ignoreCase = true) ||
             platformName.contains("Chrome", ignoreCase = true) ||
             platformName.contains("Firefox", ignoreCase = true) ||
             platformName.contains("Safari", ignoreCase = true) ||
             platformName.contains("Opera", ignoreCase = true) ||
             platformName.contains("Edge", ignoreCase = true)
 
-    if (isWeb) {
+    if (isLargeScreenPlatform) {
         WebApp()
     } else {
         var personInfo by remember { mutableStateOf<PersonInfo?>(null) }

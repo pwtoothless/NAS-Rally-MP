@@ -88,6 +88,7 @@ import com.nasrally.nasrally.RallyRequestRow
 import com.nasrally.nasrally.Waiver
 import com.nasrally.nasrally.fetchCurrentProfile
 import com.nasrally.nasrally.fetchUserWaivers
+import com.nasrally.nasrally.getPlatform
 import com.nasrally.nasrally.getProfileImageURL
 import com.nasrally.nasrally.getRallyImageURL
 import com.nasrally.nasrally.login
@@ -109,6 +110,8 @@ import kotlinx.coroutines.launch
 fun WebApp() {
     var personInfo by remember { mutableStateOf<PersonInfo?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    val platformName = remember { getPlatform().name }
+    val isDesktop = remember(platformName) { platformName.contains("Java", ignoreCase = true) || platformName.contains("JVM", ignoreCase = true) }
 
     LaunchedEffect(Unit) {
         try {
@@ -126,7 +129,7 @@ fun WebApp() {
                 CircularProgressIndicator(modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Loading NASRally Web...",
+                    text = if (isDesktop) "Loading NASRally Desktop..." else "Loading NASRally Web...",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -572,9 +575,11 @@ fun WebContentView(
     var selectedTab by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     var themeMenuExpanded by remember { mutableStateOf(false) }
+    val platformName = remember { getPlatform().name }
+    val isDesktop = remember(platformName) { platformName.contains("Java", ignoreCase = true) || platformName.contains("JVM", ignoreCase = true) }
 
     Row(modifier = Modifier.fillMaxSize()) {
-        // Left Web Navigation Sidebar
+        // Left Web/Desktop Navigation Sidebar
         Surface(
             tonalElevation = 2.dp,
             shadowElevation = 4.dp,
@@ -621,7 +626,7 @@ fun WebContentView(
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Text(
-                                    text = "WEB PLATFORM",
+                                    text = if (isDesktop) "DESKTOP PLATFORM" else "WEB PLATFORM",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
