@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonPin
@@ -47,7 +46,6 @@ import kotlinx.coroutines.launch
 sealed class SettingsSubScreen {
     object Main : SettingsSubScreen()
     object Profile : SettingsSubScreen()
-    object PaymentInfo : SettingsSubScreen()
     object ID : SettingsSubScreen()
 }
 
@@ -73,17 +71,6 @@ fun SettingsView(
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                     ProfileView(person = person, onUpdatePerson = onUpdatePerson)
-                }
-            }
-            is SettingsSubScreen.PaymentInfo -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    IconButton(
-                        onClick = { subScreen = SettingsSubScreen.Main },
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                    CardView(person = person)
                 }
             }
             is SettingsSubScreen.ID -> {
@@ -168,14 +155,6 @@ fun SettingsView(
                                     }
                                 }
                             }
-
-                            HorizontalDivider()
-
-                            SettingsRow(
-                                icon = Icons.Default.CreditCard,
-                                title = "Payment Info",
-                                onClick = { subScreen = SettingsSubScreen.PaymentInfo }
-                            )
 
                             HorizontalDivider()
 

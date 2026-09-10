@@ -97,7 +97,6 @@ import com.nasrally.nasrally.signup
 import com.nasrally.nasrally.supabase
 import com.nasrally.nasrally.views.AdminView
 import com.nasrally.nasrally.views.AsyncImage
-import com.nasrally.nasrally.views.CardView
 import com.nasrally.nasrally.views.IDView
 import com.nasrally.nasrally.views.MessageBubble
 import com.nasrally.nasrally.views.ProfileView
@@ -1717,7 +1716,7 @@ fun WebSettingsView(
     onUpdatePerson: (PersonInfo) -> Unit,
     onLogout: () -> Unit
 ) {
-    var selectedSection by remember { mutableStateOf(0) } // 0=Profile, 1=Payment, 2=ID
+    var selectedSection by remember { mutableStateOf(0) } // 0=Profile, 1=ID
 
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -1731,15 +1730,13 @@ fun WebSettingsView(
                 modifier = Modifier.padding(bottom = 20.dp)
             ) {
                 Tab(selected = selectedSection == 0, onClick = { selectedSection = 0 }, text = { Text("Profile Editor") })
-                Tab(selected = selectedSection == 1, onClick = { selectedSection = 1 }, text = { Text("Payment Info") })
-                Tab(selected = selectedSection == 2, onClick = { selectedSection = 2 }, text = { Text("Verify ID") })
+                Tab(selected = selectedSection == 1, onClick = { selectedSection = 1 }, text = { Text("Verify ID") })
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when (selectedSection) {
                     0 -> ProfileView(person = personInfo, onUpdatePerson = onUpdatePerson)
-                    1 -> CardView(person = personInfo)
-                    2 -> IDView(person = personInfo)
+                    1 -> IDView(person = personInfo)
                 }
             }
         }

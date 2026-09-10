@@ -41,15 +41,6 @@ struct SettingsView: View {
                     .pickerStyle(.menu)
                 }
                 
-                NavigationLink(destination: CardView(person: $person)) {
-                    HStack {
-                        Image(systemName: "creditcard")
-                            .padding(.leading, 10)
-                        Text("Payment Info")
-                            .padding(.leading, 8)
-                    }
-                }
-                
                 NavigationLink(destination: IDView(person: $person)) {
                     HStack {
                         Image(systemName: "person.text.rectangle")
