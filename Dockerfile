@@ -13,7 +13,7 @@ COPY . .
 # Compile the production web distribution
 # Note: Depending on your Kotlin/JS or Compose Web setup, this task might be 
 # :webApp:wasmJsBrowserDistribution or :webApp:build
-RUN ./gradlew :webApp:jsBrowserDistribution --no-daemon
+RUN ./gradlew :webApp:wasmJsBrowserDistribution --no-daemon
 
 # Stage 2: Serve the static files with Nginx
 FROM nginx:alpine
@@ -22,8 +22,7 @@ FROM nginx:alpine
 RUN sed -i 's/listen  *80;/listen 8089;/g' /etc/nginx/conf.d/default.conf
 
 # Copy the generated static files into the Nginx HTML directory
-# Note: Verify your Gradle output path. It is typically build/distributions or build/dist/js/productionExecutable
-COPY --from=builder /app/webApp/build/distributions /usr/share/nginx/html
+COPY --from=builder /app/webApp/build/dist/wasmJs/productionExecutable /usr/share/nginx/html
 
 # Expose port 8089
 EXPOSE 8089
