@@ -7,6 +7,9 @@ import SwiftUI
 import Foundation
 import Supabase
 
+var penisChance = Int.random(in: 1..<11)
+let eggplantEmoji = "🍆"
+
 struct AdminProfile: Codable, Identifiable {
     var id: UUID
     var name: String
@@ -58,11 +61,26 @@ struct AdminView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Text("Admin Dashboard")
-                .font(.title2)
-                .bold()
-                .padding(.top, 16)
-                .padding(.bottom, 12)
+            HStack() {
+                Text("Admin Dashboard")
+                    .font(.title2)
+                    .bold()
+                    .padding(.top, 16)
+                    .padding(.bottom, 12)
+                    .onAppear() {
+                        penisChance = Int.random(in: 1..<11)
+                    }
+                if (penisChance == 1) {
+                    Text("\(eggplantEmoji)")
+                        .font(.title2)
+                        .bold()
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
+                }
+            }
+                .onAppear() {
+                    print(" penis chance: \(penisChance)")
+                }
             
             HStack(spacing: 0) {
                 tabButton(title: "Users", index: 0)
