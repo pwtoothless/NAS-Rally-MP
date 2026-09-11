@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'shared/**'
+      - 'Dockerfile'
 
 jobs:
   build-and-push:
