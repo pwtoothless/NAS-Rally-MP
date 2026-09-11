@@ -1,9 +1,14 @@
 # Stage 1: Build the Kotlin web application
-FROM eclipse-temurin:17-jdk AS builder
+FROM ubuntu:24.04 AS builder
 WORKDIR /app
 
-# Install OS tools required by Kotlin's Node/Yarn setup
-RUN apt-get update && apt-get install -y git python3 make g++ curl libatomic1 && rm -rf /var/lib/apt/lists/*
+# Install OpenJDK 17 and all necessary web build tools in a modern OS environment
+RUN apt-get update && \
+    apt-get install -y openjdk-17-jdk git python3 make g++ curl libatomic1 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set JAVA_HOME so Gradle can locate the JDK
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # Copy build configuration files first for caching
 COPY gradlew .
