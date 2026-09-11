@@ -13,7 +13,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 val supabase = createSupabaseClient(
-    supabaseUrl = "http://24.16.3.100:8000",
+    supabaseUrl = "https://api-nas-rally.mayflower-paradise.us",
     supabaseKey = "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"
 ) {
     install(Auth)
