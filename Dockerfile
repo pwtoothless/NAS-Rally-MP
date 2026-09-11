@@ -3,7 +3,7 @@ FROM eclipse-temurin:17-jdk AS builder
 WORKDIR /app
 
 # Install OS tools required by Kotlin's Node/Yarn setup
-RUN apt-get update && apt-get install -y git python3 make g++ curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git python3 make g++ curl libatomic1 && rm -rf /var/lib/apt/lists/*
 
 # Copy build configuration files first for caching
 COPY gradlew .
