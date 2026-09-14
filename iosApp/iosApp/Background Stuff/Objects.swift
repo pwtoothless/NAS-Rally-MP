@@ -95,4 +95,19 @@ struct ReadReceipt: Codable {
 struct RallyRow: Codable, Identifiable {
     let id: UUID
     let name: String
+    let description: String?
+    let eventStart: String?
+    let eventEnd: String?
+    let eventImage: String?
+    let eventCost: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case description
+        case eventStart = "event_start"
+        case eventEnd = "event_end"
+        case eventImage = "event_image"
+        case eventCost = "event_cost"
+    }
 }

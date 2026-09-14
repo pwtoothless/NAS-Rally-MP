@@ -7,7 +7,7 @@ import Foundation
 import Supabase
 
 let supabase = SupabaseClient(
-    supabaseURL: URL(string: "http://24.16.3.100:8000")!,
+    supabaseURL: URL(string: "https://api-nas-rally.mayflower-paradise.us")!,
     supabaseKey: "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"
 )
 
@@ -259,6 +259,12 @@ func getProfileImageURL(for userID: UUID) throws -> URL {
         .getPublicURL(path: userID.uuidString + "/images/profile.jpg")
 }
 
+func fetchUserIDImageData(for userID: UUID) async throws -> Data {
+    return try await supabase.storage
+        .from("User-IDs")
+        .download(path: userID.uuidString + "/userid.png")
+}
+
 func getRallyImageURL(for name: String) throws -> URL {
     return try supabase.storage
         .from("RallyLogos")
@@ -267,24 +273,53 @@ func getRallyImageURL(for name: String) throws -> URL {
 
 // MARK: - Waiver Models
 
+struct WaiverRallyInfo: Codable {
+    let name: String
+}
+
 struct Waiver: Codable, Identifiable {
     let id: UUID
     let waiver_name: String
+    let waiver_content: String?
+    let rallies: WaiverRallyInfo?
     
     enum CodingKeys: String, CodingKey {
         case id
         case waiver_name
+        case waiver_content
+        case rallies
     }
+}
+
+struct SignedWaiverRow: Codable {
+    let waiver_id: UUID
+    let user_id: UUID
+}
+
+struct UserWaiversResult {
+    let pending: [Waiver]
+    let signed: [Waiver]
 }
 
 // MARK: - Waiver Fetching
 
-func fetchUserWaivers(for userID: UUID) async throws -> [Waiver] {
-    let waivers: [Waiver] = try await supabase.from("waivers")
-        .select("id, waiver_name, rallies!inner(rally_participants!inner(user_id))")
+func fetchUserWaivers(for userID: UUID) async throws -> UserWaiversResult {
+    let allWaivers: [Waiver] = try await supabase.from("waivers")
+        .select("id, waiver_name, waiver_content, rallies!inner(name, rally_participants!inner(user_id))")
         .eq("rallies.rally_participants.user_id", value: userID.uuidString)
         .execute()
         .value
         
-    return waivers
+    let signedRows: [SignedWaiverRow] = (try? await supabase.from("signed_waivers")
+        .select("waiver_id, user_id")
+        .eq("user_id", value: userID.uuidString)
+        .execute()
+        .value) ?? []
+        
+    let signedSet = Set(signedRows.map { $0.waiver_id })
+    
+    let pending = allWaivers.filter { !signedSet.contains($0.id) }
+    let signed = allWaivers.filter { signedSet.contains($0.id) }
+    
+    return UserWaiversResult(pending: pending, signed: signed)
 }

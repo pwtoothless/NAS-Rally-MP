@@ -10,6 +10,10 @@ struct DatabaseRally: Codable, Identifiable {
     let id: UUID
     let name: String
     let description: String?
+    let event_start: String?
+    let event_end: String?
+    let event_image: String?
+    let event_cost: Double?
 }
 
 struct RalliesView: View {
@@ -216,9 +220,30 @@ struct RallyUserDetailSheet: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        if let start = rally.event_start, let end = rally.event_end, !start.isEmpty {
+                            HStack {
+                                Image(systemName: "calendar")
+                                    .foregroundColor(.blue)
+                                Text("\(start) — \(end)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.top, 12)
+                        }
+                        
+                        if let cost = rally.event_cost {
+                            HStack {
+                                Image(systemName: "dollarsign.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("Cost: $\(String(format: "%.2f", cost))")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                        
                         Text("About the Rally")
                             .font(.headline)
-                            .padding(.top, 16)
+                            .padding(.top, 8)
                         
                         Text(rally.description ?? "Welcome to the \(rally.name) rally! Join us for a thrilling experience filled with automotive adventure, scenic routes, and camaraderie with fellow car enthusiasts. Detailed maps and schedules will be provided upon approval.")
                             .font(.body)

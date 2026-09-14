@@ -185,15 +185,29 @@ struct IDView: View {
     }
     
     private func uploadAndSaveID() {
+        guard let image = selectedImage else { return }
+        
         isUploading = true
         isError = false
         toastMessage = ""
         
         Task {
             do {
-                try await Task.sleep(nanoseconds: 1_500_000_000)
+                guard let imageData = image.pngData() ?? image.jpegData(compressionQuality: 0.8) else {
+                    throw NSError(domain: "IDUpload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to process image data."])
+                }
                 
-                toastMessage = "ID uploaded successfully! (Mocked)"
+                let path = "\(person.id.uuidString)/userid.png"
+                
+                try await supabase.storage
+                    .from("User-IDs")
+                    .upload(
+                        path,
+                        data: imageData,
+                        options: FileOptions(contentType: "image/png", upsert: true)
+                    )
+                
+                toastMessage = "ID uploaded successfully!"
                 isError = false
                 showToast = true
                 
