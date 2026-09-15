@@ -6,7 +6,6 @@ This is the communication app that NAS Rally will be using to communicate with p
 # Features
 
 - Support for eSigning of Waivers
-- Support for
 - Support for Real Time Chat Rooms with Event Attendees
 
 # Instalation
