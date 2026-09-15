@@ -81,12 +81,20 @@ struct IDView: View {
         ZStack {
             ScrollView {
                 VStack(spacing: 28) {
+                    HStack {
+                        Text("Verify ID")
+                            .font(.title2)
+                            .bold()
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+
                     Text("Please capture a clear photo of the front of your driver's license or government-issued ID for registration.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                        .multilineTextAlignment(.leading)
                         .padding(.horizontal)
-                        .padding(.top, 16)
                     
                     IDCardPreview(image: selectedImage)
                     

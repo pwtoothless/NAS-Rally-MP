@@ -54,6 +54,7 @@ import com.nasrally.nasrally.PersonInfo
 import com.nasrally.nasrally.getRallyImageURL
 import com.nasrally.nasrally.supabase
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.launch
 
 @Composable
@@ -67,7 +68,7 @@ fun ChatView(person: PersonInfo) {
             isLoading = true
             try {
                 availableGroups = supabase.from("groups")
-                    .select {
+                    .select(Columns.raw("id, name, group_members!inner(user_id)")) {
                         filter {
                             eq("group_members.user_id", person.id)
                         }
@@ -187,6 +188,12 @@ fun MessageThreadView(
 
     LaunchedEffect(Unit) {
         viewModel.loadMessages(isRefresh = true)
+    }
+
+    LaunchedEffect(messages.firstOrNull()?.id, messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(0)
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

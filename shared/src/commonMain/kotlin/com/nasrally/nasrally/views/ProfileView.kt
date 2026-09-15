@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,8 +59,12 @@ fun ProfileView(
     var phoneNumberInput by remember(person) { mutableStateOf(person.phoneNumber) }
 
     val scope = rememberCoroutineScope()
-    val profileImageUrl = remember(person.id) {
-        if (!person.isTestUser) getProfileImageURL(person.id) else null
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(person.id) {
+        if (!person.isTestUser) {
+            profileImageUrl = getProfileImageURL(person.id)
+        }
     }
 
     Column(

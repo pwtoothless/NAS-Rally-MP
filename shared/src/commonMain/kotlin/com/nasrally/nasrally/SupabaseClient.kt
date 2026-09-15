@@ -6,9 +6,11 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -145,26 +147,61 @@ suspend fun updateProfile(person: PersonInfo) {
         }
 }
 
-fun getProfileImageURL(userId: String): String {
-    return supabase.storage.from("Profile Pictures").publicUrl("$userId/images/profile.jpg")
+suspend fun getProfileImageURL(userId: String): String? {
+    return try {
+        supabase.storage.from("Profile Pictures").createSignedUrl(
+            path = "$userId/images/profile.jpg",
+            expiresIn = 60.minutes
+        )
+    } catch (e: Exception) {
+        println("Error creating signed URL for profile picture: ${e.message}")
+        null
+    }
 }
 
 fun getRallyImageURL(name: String): String {
     return supabase.storage.from("RallyLogos").publicUrl("$name.png")
 }
 
-suspend fun fetchUserWaivers(userId: String): List<Waiver> {
+suspend fun fetchUserWaivers(userId: String): UserWaiversResult {
     return try {
-        supabase.from("waivers")
-            .select {
+        val allWaivers: List<Waiver> = supabase.from("waivers")
+            .select(Columns.raw("id, waiver_name, waiver_content, rallies!inner(name, rally_participants!inner(user_id))")) {
                 filter {
                     eq("rallies.rally_participants.user_id", userId)
                 }
             }
             .decodeList<Waiver>()
+
+        val signedRows: List<SignedWaiverRow> = try {
+            supabase.from("signed_waivers")
+                .select {
+                    filter {
+                        eq("user_id", userId)
+                    }
+                }
+                .decodeList<SignedWaiverRow>()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val signedSet = signedRows.map { it.waiverId }.toSet()
+        val pending = allWaivers.filter { !signedSet.contains(it.id) }
+        val signed = allWaivers.filter { signedSet.contains(it.id) }
+
+        UserWaiversResult(pending = pending, signed = signed)
     } catch (e: Exception) {
         println("Fetch waivers failed: ${e.message}")
-        emptyList()
+        UserWaiversResult(pending = emptyList(), signed = emptyList())
+    }
+}
+
+suspend fun fetchUserIDImageData(userId: String): ByteArray? {
+    return try {
+        supabase.storage.from("User-IDs").downloadAuthenticated("$userId/userid.png")
+    } catch (e: Exception) {
+        println("Download ID image failed: ${e.message}")
+        null
     }
 }
 

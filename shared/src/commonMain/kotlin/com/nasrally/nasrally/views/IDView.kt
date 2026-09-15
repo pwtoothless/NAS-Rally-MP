@@ -44,16 +44,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nasrally.nasrally.PersonInfo
+import com.nasrally.nasrally.supabase
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun IDCardPreview() {
+fun IDCardPreview(imageBytes: ByteArray?) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -62,52 +65,68 @@ fun IDCardPreview() {
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .border(
                 width = 2.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                color = if (imageBytes != null) Color(0xFF2E7D32) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(16.dp)
             )
-            .padding(24.dp),
+            .padding(if (imageBytes != null) 0.dp else 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Badge,
-                contentDescription = "ID Card Icon",
-                modifier = Modifier.size(56.dp),
-                tint = MaterialTheme.colorScheme.primary
+        if (imageBytes != null && imageBytes.isNotEmpty()) {
+            AsyncImage(
+                byteArray = imageBytes,
+                contentDescription = "Captured ID Document",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Badge,
+                    contentDescription = "ID Card Icon",
+                    modifier = Modifier.size(56.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Capture Your ID Card",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+                Text(
+                    text = "Capture Your ID Card",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
-                text = "Place your ID card inside the frame.\nEnsure all text is clear and readable.",
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+                Text(
+                    text = "Place your ID card inside the frame.\nEnsure all text is clear and readable.",
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
 fun IDView(person: PersonInfo) {
+    var selectedImageBytes by remember { mutableStateOf<ByteArray?>(null) }
     var isUploading by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var showToast by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val launchCamera = rememberImagePicker(source = ImageSource.CAMERA) { pickedBytes ->
+        selectedImageBytes = pickedBytes
+    }
+    val launchGallery = rememberImagePicker(source = ImageSource.GALLERY) { pickedBytes ->
+        selectedImageBytes = pickedBytes
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -115,26 +134,29 @@ fun IDView(person: PersonInfo) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.Start
         ) {
             Text(
                 text = "Verify ID",
-                fontSize = 22.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                textAlign = TextAlign.Start
             )
 
             Text(
-                text = "Please capture a clear photo of the front of your driver's license or government-issued ID for registration.",
+                text = "Please capture or select a clear photo of the front of your driver's license or government-issued ID for registration.",
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            IDCardPreview()
+            IDCardPreview(imageBytes = selectedImageBytes)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -143,15 +165,7 @@ fun IDView(person: PersonInfo) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = {
-                        toastMessage = "Camera capture invoked (Simulated)"
-                        isError = false
-                        showToast = true
-                        scope.launch {
-                            delay(2000)
-                            showToast = false
-                        }
-                    },
+                    onClick = { launchCamera() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
@@ -162,22 +176,14 @@ fun IDView(person: PersonInfo) {
                 }
 
                 OutlinedButton(
-                    onClick = {
-                        toastMessage = "Library picker invoked (Simulated)"
-                        isError = false
-                        showToast = true
-                        scope.launch {
-                            delay(2000)
-                            showToast = false
-                        }
-                    },
+                    onClick = { launchGallery() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
                 ) {
                     Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Select from Library", fontWeight = FontWeight.Bold)
+                    Text("Select from Library / File", fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -185,18 +191,30 @@ fun IDView(person: PersonInfo) {
 
             Button(
                 onClick = {
+                    val bytes = selectedImageBytes ?: return@Button
                     isUploading = true
                     scope.launch {
-                        delay(1500)
-                        toastMessage = "ID uploaded successfully! (Mocked)"
-                        isError = false
-                        showToast = true
-                        isUploading = false
-                        delay(2000)
-                        showToast = false
+                        try {
+                            val path = "${person.id}/userid.png"
+                            supabase.storage.from("User-IDs").upload(path, bytes) {
+                                upsert = true
+                            }
+                            toastMessage = "ID uploaded successfully!"
+                            isError = false
+                            showToast = true
+                        } catch (e: Exception) {
+                            println("Upload ID error: ${e.message}")
+                            toastMessage = e.message ?: "Upload failed"
+                            isError = true
+                            showToast = true
+                        } finally {
+                            isUploading = false
+                            delay(2000)
+                            showToast = false
+                        }
                     }
                 },
-                enabled = !isUploading,
+                enabled = selectedImageBytes != null && !isUploading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)
@@ -235,7 +253,7 @@ fun IDView(person: PersonInfo) {
                     Icon(
                         imageVector = if (isError) Icons.Default.Warning else Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        tint = if (isError) MaterialTheme.colorScheme.error else Color(0xFF2E7D32)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(

@@ -101,7 +101,9 @@ import com.nasrally.nasrally.views.IDView
 import com.nasrally.nasrally.views.MessageBubble
 import com.nasrally.nasrally.views.ProfileView
 import com.nasrally.nasrally.views.RallyUserDetailDialog
+import com.nasrally.nasrally.views.WaiverDetailDialog
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -651,8 +653,14 @@ fun WebContentView(
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            var sidebarAvatarUrl by remember { mutableStateOf<String?>(null) }
+                            LaunchedEffect(personInfo.id) {
+                                if (!personInfo.isTestUser) {
+                                    sidebarAvatarUrl = getProfileImageURL(personInfo.id)
+                                }
+                            }
                             AsyncImage(
-                                url = if (!personInfo.isTestUser) getProfileImageURL(personInfo.id) else null,
+                                url = sidebarAvatarUrl,
                                 contentDescription = personInfo.name,
                                 modifier = Modifier
                                     .size(44.dp)
@@ -917,8 +925,12 @@ fun WebHomeView(
     personInfo: PersonInfo,
     onNavigate: (Int) -> Unit
 ) {
-    val profileImageUrl = remember(personInfo.id) {
-        if (!personInfo.isTestUser) getProfileImageURL(personInfo.id) else null
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(personInfo.id) {
+        if (!personInfo.isTestUser) {
+            profileImageUrl = getProfileImageURL(personInfo.id)
+        }
     }
 
     Column(
@@ -1290,6 +1302,36 @@ fun WebRalliesView(personInfo: PersonInfo) {
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(24.dp))
 
+                        if (!rally.eventStart.isNullOrEmpty() && !rally.eventEnd.isNullOrEmpty()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Dates: ${rally.eventStart} — ${rally.eventEnd}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
+                        rally.eventCost?.let { cost ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Cost: $$cost",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2E7D32)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+
                         Text(
                             text = "About this Rally",
                             fontSize = 18.sp,
@@ -1371,7 +1413,7 @@ fun WebChatView(personInfo: PersonInfo) {
             isLoading = true
             try {
                 availableGroups = supabase.from("groups")
-                    .select {
+                    .select(Columns.raw("id, name, group_members!inner(user_id)")) {
                         filter {
                             eq("group_members.user_id", personInfo.id)
                         }
@@ -1484,6 +1526,12 @@ fun WebChatView(personInfo: PersonInfo) {
 
                     LaunchedEffect(group.id) {
                         viewModel.loadMessages(isRefresh = true)
+                    }
+
+                    LaunchedEffect(messages.firstOrNull()?.id, messages.size) {
+                        if (messages.isNotEmpty()) {
+                            listState.animateScrollToItem(0)
+                        }
                     }
 
                     // Thread Top Bar
@@ -1611,13 +1659,25 @@ fun WebChatView(personInfo: PersonInfo) {
 
 @Composable
 fun WebWaiversView(personInfo: PersonInfo) {
+    var selectedTab by remember { mutableStateOf(0) } // 0: Pending, 1: Signed
     var pendingWaivers by remember { mutableStateOf<List<Waiver>>(emptyList()) }
+    var signedWaivers by remember { mutableStateOf<List<Waiver>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var selectedWaiver by remember { mutableStateOf<Waiver?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val loadWaivers: () -> Unit = {
+        scope.launch {
+            isLoading = true
+            val result = fetchUserWaivers(personInfo.id)
+            pendingWaivers = result.pending
+            signedWaivers = result.signed
+            isLoading = false
+        }
+    }
 
     LaunchedEffect(personInfo.id) {
-        isLoading = true
-        pendingWaivers = fetchUserWaivers(personInfo.id)
-        isLoading = false
+        loadWaivers()
     }
 
     Card(
@@ -1638,68 +1698,177 @@ fun WebWaiversView(personInfo: PersonInfo) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier.widthIn(max = 400.dp)
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Pending (${pendingWaivers.size})", fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Signed (${signedWaivers.size})", fontWeight = FontWeight.Bold) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (pendingWaivers.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Color(0xFF2E7D32)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "All required waivers have been executed!",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = "No pending document signatures needed for your profile.",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            } else if (selectedTab == 0) {
+                if (pendingWaivers.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color(0xFF2E7D32)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "All required waivers have been executed!",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                text = "No pending document signatures needed for your profile.",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(pendingWaivers) { waiver ->
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedWaiver = waiver }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Description,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            waiver.rallies?.name?.let { rallyName ->
+                                                if (rallyName.isNotBlank()) {
+                                                    Text(
+                                                        text = rallyName,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                }
+                                            }
+                                            Text(
+                                                text = waiver.waiverName,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp
+                                            )
+                                        }
+                                    }
+
+                                    Button(onClick = { selectedWaiver = waiver }) {
+                                        Text("View & Sign")
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(pendingWaivers) { waiver ->
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
+                if (signedWaivers.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "No signed waivers yet.",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(signedWaivers) { waiver ->
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .clickable { selectedWaiver = waiver }
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Description,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Text(
-                                        text = waiver.waiverName,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
-                                    )
-                                }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Color(0xFF2E7D32),
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Column {
+                                            waiver.rallies?.name?.let { rallyName ->
+                                                if (rallyName.isNotBlank()) {
+                                                    Text(
+                                                        text = rallyName,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                }
+                                            }
+                                            Text(
+                                                text = waiver.waiverName,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp
+                                            )
+                                        }
+                                    }
 
-                                Button(onClick = { /* Sign waiver action */ }) {
-                                    Text("Sign Document")
+                                    OutlinedButton(onClick = { selectedWaiver = waiver }) {
+                                        Text("View Document", color = Color(0xFF2E7D32))
+                                    }
                                 }
                             }
                         }
@@ -1707,6 +1876,20 @@ fun WebWaiversView(personInfo: PersonInfo) {
                 }
             }
         }
+    }
+
+    selectedWaiver?.let { waiver ->
+        val isAlreadySigned = signedWaivers.any { it.id == waiver.id }
+        WaiverDetailDialog(
+            waiver = waiver,
+            userId = personInfo.id,
+            isAlreadySigned = isAlreadySigned,
+            onSigned = {
+                loadWaivers()
+                selectedWaiver = null
+            },
+            onDismiss = { selectedWaiver = null }
+        )
     }
 }
 

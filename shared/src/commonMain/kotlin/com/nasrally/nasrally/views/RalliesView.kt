@@ -14,16 +14,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -46,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.nasrally.nasrally.DatabaseRally
 import com.nasrally.nasrally.PersonInfo
+import com.nasrally.nasrally.RallyParticipantRow
 import com.nasrally.nasrally.RallyRequestInsert
 import com.nasrally.nasrally.getRallyImageURL
 import com.nasrally.nasrally.supabase
@@ -80,8 +85,8 @@ fun RalliesView(person: PersonInfo) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                //horizontalAlignment = Alignment.CenterHorizontally,
+                //verticalArrangement = Arrangement.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.DirectionsCar,
@@ -112,6 +117,14 @@ fun RalliesView(person: PersonInfo) {
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
+                item {
+                    Text(
+                        text = "Rallies",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 10.dp)
+                    )
+                }
                 items(allRallies) { rally ->
                     val isJoined = person.rallieNames.contains(rally.name)
                     Card(
@@ -195,10 +208,28 @@ fun RallyUserDetailDialog(
     person: PersonInfo,
     onDismiss: () -> Unit
 ) {
+    var attendeeCount by remember { mutableStateOf(0) }
+    var isLoadingCount by remember { mutableStateOf(true) }
     var isSending by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf("") }
     val isJoined = person.rallieNames.contains(rally.name)
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(rally.id) {
+        isLoadingCount = true
+        try {
+            val participants = supabase.from("rally_participants")
+                .select {
+                    filter { eq("rally_id", rally.id) }
+                }
+                .decodeList<RallyParticipantRow>()
+            attendeeCount = participants.size
+        } catch (e: Exception) {
+            println("Error fetching attendee count: ${e.message}")
+        } finally {
+            isLoadingCount = false
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -243,13 +274,76 @@ fun RallyUserDetailDialog(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(60.dp)
+                    ) {
+                        if (isLoadingCount) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        } else {
+                            Text(
+                                text = "$attendeeCount",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Attending",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider()
+                HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (!rally.eventStart.isNull_or_empty() && !rally.eventEnd.isNull_or_empty()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "${rally.eventStart} — ${rally.eventEnd}",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    rally.eventCost?.let { cost ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.MonetizationOn,
+                                contentDescription = null,
+                                tint = Color(0xFF2E7D32),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Cost: $$cost",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF2E7D32)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
                     Text(
                         text = "About the Rally",
                         fontWeight = FontWeight.Bold,
@@ -260,7 +354,8 @@ fun RallyUserDetailDialog(
                         text = rally.description
                             ?: "Welcome to the ${rally.name} rally! Join us for a thrilling experience filled with automotive adventure, scenic routes, and camaraderie with fellow car enthusiasts.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp
                     )
                 }
 
@@ -273,7 +368,7 @@ fun RallyUserDetailDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -318,3 +413,5 @@ fun RallyUserDetailDialog(
         }
     }
 }
+
+private fun String?.isNull_or_empty(): Boolean = this == null || this.isEmpty()

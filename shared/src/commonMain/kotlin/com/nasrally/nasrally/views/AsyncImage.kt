@@ -65,3 +65,41 @@ fun AsyncImage(
         }
     }
 }
+
+@Composable
+fun AsyncImage(
+    byteArray: ByteArray?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    loading: @Composable () -> Unit = {},
+    error: @Composable () -> Unit = {}
+) {
+    var bitmap by remember(byteArray) { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(byteArray) {
+        if (byteArray != null && byteArray.isNotEmpty()) {
+            try {
+                bitmap = byteArray.decodeToImageBitmap()
+            } catch (e: Exception) {
+                bitmap = null
+            }
+        } else {
+            bitmap = null
+        }
+    }
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        val b = bitmap
+        if (b != null) {
+            Image(
+                bitmap = b,
+                contentDescription = contentDescription,
+                modifier = Modifier.matchParentSize(),
+                contentScale = contentScale
+            )
+        } else {
+            error()
+        }
+    }
+}

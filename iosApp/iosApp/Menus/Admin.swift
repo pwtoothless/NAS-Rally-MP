@@ -80,7 +80,9 @@ struct AdminView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 12)
                 }
+                Spacer()
             }
+            .padding(.horizontal, 16)
                 .onAppear() {
                     print(" penis chance: \(penisChance)")
                 }

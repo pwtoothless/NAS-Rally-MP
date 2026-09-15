@@ -12,11 +12,15 @@ struct SettingsView: View {
     
     var body: some View {
         VStack {
-            Text("Settings")
-                .padding(.horizontal, 15)
-                .padding(.top, 10)
-                .padding(.bottom, 10)
-                .bold()
+            HStack {
+                Text("Settings")
+                    .font(.title2)
+                    .bold()
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
             
             List {
                 NavigationLink(destination: ProfileView(person: $person)) {

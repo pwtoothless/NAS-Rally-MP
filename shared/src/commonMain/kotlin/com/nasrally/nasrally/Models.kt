@@ -102,13 +102,81 @@ data class Message(
 data class DatabaseRally(
     val id: String,
     val name: String,
-    val description: String? = null
+    val description: String? = null,
+    @SerialName("event_start") val eventStart: String? = null,
+    @SerialName("event_end") val eventEnd: String? = null,
+    @SerialName("event_image") val eventImage: String? = null,
+    @SerialName("event_cost") val eventCost: Double? = null
+)
+
+@Serializable
+data class WaiverRallyInfo(
+    val name: String
 )
 
 @Serializable
 data class Waiver(
     val id: String,
-    @SerialName("waiver_name") val waiverName: String
+    @SerialName("waiver_name") val waiverName: String,
+    @SerialName("waiver_content") val waiverContent: String? = null,
+    val rallies: WaiverRallyInfo? = null
+)
+
+@Serializable
+data class SignedWaiverRow(
+    @SerialName("waiver_id") val waiverId: String,
+    @SerialName("user_id") val userId: String
+)
+
+@Serializable
+data class SignedWaiverInsertRow(
+    @SerialName("user_id") val userId: String,
+    @SerialName("waiver_id") val waiverId: String
+)
+
+data class UserWaiversResult(
+    val pending: List<Waiver>,
+    val signed: List<Waiver>
+)
+
+@Serializable
+data class RallyInsertRow(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("event_start") val eventStart: String? = null,
+    @SerialName("event_end") val eventEnd: String? = null,
+    @SerialName("event_image") val eventImage: String? = null,
+    @SerialName("event_cost") val eventCost: Double? = null
+)
+
+@Serializable
+data class RallyUpdateRow(
+    val name: String,
+    val description: String? = null,
+    @SerialName("event_start") val eventStart: String? = null,
+    @SerialName("event_end") val eventEnd: String? = null,
+    @SerialName("event_image") val eventImage: String? = null,
+    @SerialName("event_cost") val eventCost: Double? = null
+)
+
+@Serializable
+data class GroupInsertRow(
+    val id: String,
+    val name: String
+)
+
+@Serializable
+data class GroupUpdateRow(
+    val name: String
+)
+
+@Serializable
+data class WaiverInsertRow(
+    val id: String,
+    @SerialName("rally_id") val rallyId: String,
+    @SerialName("waiver_name") val waiverName: String,
+    @SerialName("waiver_content") val waiverContent: String
 )
 
 @Serializable

@@ -11,10 +11,15 @@ struct HomeView: View {
 
     var body: some View {
         VStack {
-            Text("Home")
-                .padding(.top, 10)
-                .padding(.bottom, 10)
-                .bold()
+            HStack {
+                Text("Home")
+                    .font(.title2)
+                    .bold()
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
             
             // Main Page
             HStack {

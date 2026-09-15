@@ -22,11 +22,15 @@ struct WaversView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                Text("Waivers")
-                    .font(.title2)
-                    .bold()
-                    .padding(.top, 16)
-                    .padding(.bottom, 12)
+                HStack {
+                    Text("Waivers")
+                        .font(.title2)
+                        .bold()
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
                 
                 // --- TOP VIEW PICKER (LIKE ADMIN VIEW) ---
                 HStack(spacing: 0) {
