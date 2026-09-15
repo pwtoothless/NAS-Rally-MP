@@ -1,7 +1,4 @@
-# Project Name
-- Mac (Found in releases)
-- Web (Please use repository link in
-  NAS Rally
+# NAS Rally - A Communication Platform for Car Rally Events
 # Description
 
 This is the communication app that NAS Rally will be using to communicate with participants and to join/schedule events.
@@ -17,5 +14,7 @@ This is the communication app that NAS Rally will be using to communicate with p
 This app supports the following platforms:
 
 - Windows (Found in releases) the top right)
+- Mac (Found in releases)
+- Web (Please use repository link in
 - iOS (TestFlight Soon)
 - Android (APK found in Releases)
