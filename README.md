@@ -12,8 +12,8 @@ This is the communication app that NAS Rally will be using to communicate with p
 
 This app supports the following platforms:
 
-- Windows (Found in releases) the top right)
+- Windows (Found in releases)
 - Mac (Found in releases)
-- Web (Please use repository link in
+- Web (Please use repository link in the top right)
 - iOS (TestFlight Soon)
 - Android (APK found in Releases)
