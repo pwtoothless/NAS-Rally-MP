@@ -9,52 +9,54 @@ struct ContentView: View {
     @Binding var person: PersonInfo
     
     var body: some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            TabView() {
-                Tab("Home", systemImage: "house") {
+        Group {
+            if #available(iOS 26.0, macOS 26.0, *) {
+                TabView() {
+                    Tab("Home", systemImage: "house") {
+                        HomeView(person: $person)
+                    }
+                    Tab("Rallies", systemImage: "car.2.fill") {
+                        RalliesView(person: $person)
+                    }
+                    Tab("Chat", systemImage: "bubble.left.and.bubble.right") {
+                        ChatView(person: $person)
+                    }
+                    Tab("Wavers", systemImage: "long.text.page.and.pencil") {
+                        WaversView(person: $person)
+                    }
+                    Tab("Settings", systemImage: "gearshape") {
+                        SettingsView(person: $person)
+                    }
+                    if (person.privligeLevel == "Admin") {
+                        Tab("Admin", systemImage: "person.badge.checkmark.seal.fill") {
+                            AdminView(person: $person)
+                        }
+                        Tab("Onboarding-Test", systemImage: "long.text.page.and.pencil") {
+                            OnboardingView(person: $person)
+                        }
+                    }
+                }
+                .tabViewStyle(.sidebarAdaptable)
+            } else {
+                TabView {
                     HomeView(person: $person)
-                }
-                Tab("Rallies", systemImage: "car.2.fill") {
+                        .tabItem { Label("Home", systemImage: "house") }
                     RalliesView(person: $person)
-                }
-                Tab("Chat", systemImage: "bubble.left.and.bubble.right") {
+                        .tabItem { Label("Rallies", systemImage: "car.2.fill") }
                     ChatView(person: $person)
-                }
-                Tab("Wavers", systemImage: "long.text.page.and.pencil") {
+                        .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
                     WaversView(person: $person)
-                }
-                Tab("Settings", systemImage: "gearshape") {
+                        .tabItem { Label("Wavers", systemImage: "doc.text") }
                     SettingsView(person: $person)
-                }
-                if (person.privligeLevel == "Admin") {
-                    Tab("Admin", systemImage: "person.badge.checkmark.seal.fill") {
+                        .tabItem { Label("Settings", systemImage: "gearshape") }
+                    if person.privligeLevel == "Admin" {
                         AdminView(person: $person)
-                    }
-                    Tab("Onboarding-Test", systemImage: "long.text.page.and.pencil") {
-                        OnboardingView(person: $person)
+                            .tabItem { Label("Admin", systemImage: "person.circle") }
                     }
                 }
             }
-            .tabViewStyle(.sidebarAdaptable)
-        } else {
-            TabView {
-                HomeView(person: $person)
-                    .tabItem { Label("Home", systemImage: "house") }
-                RalliesView(person: $person)
-                    .tabItem { Label("Rallies", systemImage: "car.2.fill") }
-                ChatView(person: $person)
-                    .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right") }
-                WaversView(person: $person)
-                    .tabItem { Label("Wavers", systemImage: "doc.text") }
-                SettingsView(person: $person)
-                    .tabItem { Label("Settings", systemImage: "gearshape") }
-                if person.privligeLevel == "Admin" {
-                    AdminView(person: $person)
-                        .tabItem { Label("Admin", systemImage: "person.circle") }
-                }
-            }
-            .tint(themeTint)
         }
+        .tint(themeTint)
     }
 
     private var themeTint: Color? {

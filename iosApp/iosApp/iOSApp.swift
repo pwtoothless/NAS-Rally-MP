@@ -24,14 +24,26 @@ struct iOSApp: App {
                     )
                 } else {
                     LoginView(person: Binding(
-                        get: { personInfo ?? PersonInfo(id: UUID(), name: "", theme: "", bio: "", ralliesJoined: 0, rallieNames: [], privligeLevel: "", tos: false, instaHandle: "", carModel: "", phoneNumber: "") },
+                        get: { personInfo ?? PersonInfo(id: UUID(), name: "", theme: "Auto", bio: "", ralliesJoined: 0, rallieNames: [], privligeLevel: "", tos: false, instaHandle: "", carModel: "", phoneNumber: "") },
                         set: { personInfo = $0 }
                     ))
                 }
             }
+            .tint(themeTint)
             .task {
                 await loadSession()
             }
+        }
+    }
+
+    private var themeTint: Color? {
+        switch personInfo?.theme {
+        case "Blue":
+            return Color(hexString: "#1E54B3")
+        case "Red":
+            return Color(hexString: "#C11326")
+        default:
+            return nil
         }
     }
     

@@ -95,6 +95,8 @@ import com.nasrally.nasrally.login
 import com.nasrally.nasrally.logout
 import com.nasrally.nasrally.signup
 import com.nasrally.nasrally.supabase
+import com.nasrally.nasrally.theme.AppTheme
+import com.nasrally.nasrally.updateTheme
 import com.nasrally.nasrally.views.AdminView
 import com.nasrally.nasrally.views.AsyncImage
 import com.nasrally.nasrally.views.IDView
@@ -124,26 +126,32 @@ fun WebApp() {
         }
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = if (isDesktop) "Loading NASRally Desktop..." else "Loading NASRally Web...",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+    val themeName = personInfo?.theme ?: "Auto"
+
+    AppTheme(themeName = themeName) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (isDesktop) "Loading NASRally Desktop..." else "Loading NASRally Web...",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (personInfo != null) {
+                WebContentView(
+                    personInfo = personInfo!!,
+                    onUpdatePerson = { personInfo = it },
+                    onLogout = { personInfo = null }
                 )
+            } else {
+                WebAuthView(onLoginSuccess = { personInfo = it })
             }
         }
-    } else if (personInfo != null) {
-        WebContentView(
-            personInfo = personInfo!!,
-            onUpdatePerson = { personInfo = it },
-            onLogout = { personInfo = null }
-        )
-    } else {
-        WebAuthView(onLoginSuccess = { personInfo = it })
     }
 }
 
@@ -764,7 +772,11 @@ fun WebContentView(
                                         text = { Text(themeName) },
                                         onClick = {
                                             themeMenuExpanded = false
-                                            onUpdatePerson(personInfo.copy(theme = themeName))
+                                            val updatedPerson = personInfo.copy(theme = themeName)
+                                            onUpdatePerson(updatedPerson)
+                                            scope.launch {
+                                                updateTheme(updatedPerson.id, themeName)
+                                            }
                                         }
                                     )
                                 }

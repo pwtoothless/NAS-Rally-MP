@@ -129,6 +129,22 @@ nonisolated private struct SupabaseProfileUpdateRow: Encodable {
     }
 }
 
+struct SupabaseThemeUpdateRow: Encodable {
+    let theme: String
+}
+
+func updateTheme(personID: UUID, theme: String) async {
+    guard personID != PersonInfo.testUserID else { return }
+    do {
+        try await supabase.from("profiles")
+            .update(SupabaseThemeUpdateRow(theme: theme))
+            .eq("id", value: personID.uuidString)
+            .execute()
+    } catch {
+        print("Error updating theme: \(error)")
+    }
+}
+
 enum AuthResult {
     case success(PersonInfo)
     case failure(String)
