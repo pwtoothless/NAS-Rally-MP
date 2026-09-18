@@ -26,9 +26,15 @@ val supabase = createSupabaseClient(
 }
 
 suspend fun fetchCurrentProfile(): PersonInfo? {
+    try {
+        supabase.auth.awaitInitialization()
+    } catch (e: Exception) {
+        println("Error awaiting auth initialization: ${e.message}")
+    }
     val session = supabase.auth.currentSessionOrNull() ?: return null
-    val userId = session.user?.id ?: return null
-    return loadPersonInfo(userId)
+    val user = session.user ?: return null
+    val userName = user.userMetadata?.get("name")?.toString() ?: user.email ?: "User"
+    return loadPersonInfo(user.id) ?: loadPersonInfoOrCreateDefault(user.id, userName)
 }
 
 suspend fun loadPersonInfo(userId: String): PersonInfo? {
