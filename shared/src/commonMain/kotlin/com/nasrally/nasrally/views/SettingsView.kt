@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nasrally.nasrally.PersonInfo
 import com.nasrally.nasrally.logout
+import com.nasrally.nasrally.updateTheme
 import kotlinx.coroutines.launch
 
 sealed class SettingsSubScreen {
@@ -149,7 +150,11 @@ fun SettingsView(
                                             text = { Text(themeName) },
                                             onClick = {
                                                 themeMenuExpanded = false
-                                                onUpdatePerson(person.copy(theme = themeName))
+                                                val updatedPerson = person.copy(theme = themeName)
+                                                onUpdatePerson(updatedPerson)
+                                                scope.launch {
+                                                    updateTheme(updatedPerson.id, themeName)
+                                                }
                                             }
                                         )
                                     }

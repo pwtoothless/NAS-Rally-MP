@@ -26,7 +26,7 @@ extension PersonInfo {
         PersonInfo(
             id: testUserID,
             name: "Test User",
-            theme: "Default",
+            theme: "Auto",
             bio: "Local development profile",
             ralliesJoined: 0,
             rallieNames: [],

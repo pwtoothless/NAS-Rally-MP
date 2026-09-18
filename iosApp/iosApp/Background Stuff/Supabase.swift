@@ -60,7 +60,7 @@ nonisolated private struct SupabasePersonRow: Codable {
         PersonInfo(
             id: id,
             name: name ?? "",
-            theme: theme ?? "Default",
+            theme: theme ?? "Auto",
             bio: bio ?? "",
             ralliesJoined: ralliesJoined ?? 0,
             rallieNames: rallieNames ?? [],
@@ -160,7 +160,7 @@ func signup(Name: String, Email: String, Password: String) async -> AuthResult {
         let newPerson = NewSupabasePersonRow(
             id: authResponse.user.id,
             name: Name,
-            theme: "Dark",
+            theme: "Auto",
             bio: "",
             ralliesJoined: 0,
             rallieNames: [],
@@ -198,7 +198,7 @@ private func loadPersonInfoOrCreateDefault(userID: UUID, name: String) async thr
         let newPerson = NewSupabasePersonRow(
             id: userID,
             name: name,
-            theme: "Default",
+            theme: "Auto",
             bio: "",
             ralliesJoined: 0,
             rallieNames: [],

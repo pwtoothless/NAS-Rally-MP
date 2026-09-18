@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class PersonInfo(
     val id: String,
     val name: String,
-    val theme: String = "Default",
+    val theme: String = "Auto",
     val bio: String = "",
     @SerialName("rallies_joined") val ralliesJoined: Int = 0,
     @SerialName("rallie_names") val rallieNames: List<String> = emptyList(),
@@ -22,7 +22,7 @@ data class PersonInfo(
         val testUser = PersonInfo(
             id = TEST_USER_ID,
             name = "Test User",
-            theme = "Default",
+            theme = "Auto",
             bio = "Local development profile",
             ralliesJoined = 0,
             rallieNames = emptyList(),
@@ -53,7 +53,7 @@ data class SupabasePersonRow(
     fun toPersonInfo(): PersonInfo = PersonInfo(
         id = id,
         name = name ?: "",
-        theme = theme ?: "Default",
+        theme = theme ?: "Auto",
         bio = bio ?: "",
         ralliesJoined = ralliesJoined ?: 0,
         rallieNames = rallieNames ?: emptyList(),
@@ -69,7 +69,7 @@ data class SupabasePersonRow(
 data class NewSupabasePersonRow(
     val id: String,
     val name: String,
-    val theme: String = "Dark",
+    val theme: String = "Auto",
     val bio: String = "",
     @SerialName("rallies_joined") val ralliesJoined: Int = 0,
     @SerialName("rallie_names") val rallieNames: List<String> = emptyList(),

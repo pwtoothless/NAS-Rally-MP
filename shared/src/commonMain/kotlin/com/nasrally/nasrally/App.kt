@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nasrally.nasrally.theme.AppTheme
 import com.nasrally.nasrally.views.AdminView
 import com.nasrally.nasrally.views.AuthView
 import com.nasrally.nasrally.views.ChatView
@@ -45,34 +47,40 @@ fun App() {
             platformName.contains("Opera", ignoreCase = true) ||
             platformName.contains("Edge", ignoreCase = true)
 
-    if (isLargeScreenPlatform) {
-        WebApp()
-    } else {
-        var personInfo by remember { mutableStateOf<PersonInfo?>(null) }
-        var isLoading by remember { mutableStateOf(true) }
+    var personInfo by remember { mutableStateOf<PersonInfo?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
 
-        LaunchedEffect(Unit) {
-            try {
-                personInfo = fetchCurrentProfile()
-            } catch (e: Exception) {
-                println("No active session: ${e.message}")
-            } finally {
-                isLoading = false
-            }
+    LaunchedEffect(Unit) {
+        try {
+            personInfo = fetchCurrentProfile()
+        } catch (e: Exception) {
+            println("No active session: ${e.message}")
+        } finally {
+            isLoading = false
         }
+    }
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    val themeName = personInfo?.theme ?: "Auto"
+
+    AppTheme(themeName = themeName) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            if (isLargeScreenPlatform) {
+                WebApp()
+            } else {
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (personInfo != null) {
+                    ContentView(
+                        personInfo = personInfo!!,
+                        onUpdatePerson = { personInfo = it },
+                        onLogout = { personInfo = null }
+                    )
+                } else {
+                    AuthView(onLoginSuccess = { personInfo = it })
+                }
             }
-        } else if (personInfo != null) {
-            ContentView(
-                personInfo = personInfo!!,
-                onUpdatePerson = { personInfo = it },
-                onLogout = { personInfo = null }
-            )
-        } else {
-            AuthView(onLoginSuccess = { personInfo = it })
         }
     }
 }

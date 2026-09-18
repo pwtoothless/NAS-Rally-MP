@@ -11,6 +11,7 @@ import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -53,7 +54,7 @@ suspend fun loadPersonInfoOrCreateDefault(userId: String, name: String): PersonI
     val newPerson = NewSupabasePersonRow(
         id = userId,
         name = name,
-        theme = "Default",
+        theme = "Auto",
         bio = "",
         ralliesJoined = 0,
         rallieNames = emptyList(),
@@ -105,7 +106,7 @@ suspend fun signup(nameInput: String, emailInput: String, passwordInput: String)
         val newPerson = NewSupabasePersonRow(
             id = user.id,
             name = nameInput,
-            theme = "Dark",
+            theme = "Auto",
             bio = "",
             ralliesJoined = 0,
             rallieNames = emptyList(),
@@ -127,6 +128,25 @@ suspend fun logout() {
         supabase.auth.signOut()
     } catch (e: Exception) {
         println("Logout failed: ${e.message}")
+    }
+}
+
+@Serializable
+data class SupabaseThemeUpdateRow(
+    val theme: String
+)
+
+suspend fun updateTheme(userId: String, theme: String) {
+    if (userId == PersonInfo.TEST_USER_ID) return
+    try {
+        supabase.from("profiles")
+            .update(SupabaseThemeUpdateRow(theme = theme)) {
+                filter {
+                    eq("id", userId)
+                }
+            }
+    } catch (e: Exception) {
+        println("Error updating theme: ${e.message}")
     }
 }
 
