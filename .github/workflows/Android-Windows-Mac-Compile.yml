@@ -112,22 +112,32 @@ jobs:
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          if gh release view nightly >/dev/null 2>&1; then
+          if gh release view nightly --repo "$GH_REPO" >/dev/null 2>&1; then
             gh release edit nightly \
+              --repo "$GH_REPO" \
               --title "Nightly Build" \
               --prerelease
           else
             gh release create nightly \
+              --repo "$GH_REPO" \
               --title "Nightly Build" \
               --prerelease \
               --notes "This is an automated nightly build generated from the latest commit on the main branch."
           fi
 
           find release-artifacts -type f -print0 |
-            xargs -0 gh release upload nightly --clobber
+            while IFS= read -r -d '' file; do
+              gh release upload nightly \
+                "$file" \
+                --repo "$GH_REPO" \
+                --clobber
+            done
 
-          gh release edit nightly --notes "$(cat <<EOF
+          gh release edit nightly \
+            --repo "$GH_REPO" \
+            --notes "$(cat <<EOF
           This is an automated nightly build generated from the latest commit on the \`main\` branch.
 
           **Last Updated:** ${{ github.event.head_commit.timestamp }}
