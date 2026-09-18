@@ -8,6 +8,7 @@ import Supabase
 
 struct IDCardPreview: View {
     let image: UIImage?
+    var themeColor: Color = .blue
     
     var body: some View {
         ZStack {
@@ -26,7 +27,7 @@ struct IDCardPreview: View {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text.viewfinder")
                         .font(.system(size: 48))
-                        .foregroundColor(.blue.opacity(0.8))
+                        .foregroundColor(themeColor.opacity(0.8))
                     
                     Text("Capture Your ID Card")
                         .font(.headline)
@@ -96,7 +97,7 @@ struct IDView: View {
                         .multilineTextAlignment(.leading)
                         .padding(.horizontal)
                     
-                    IDCardPreview(image: selectedImage)
+                    IDCardPreview(image: selectedImage, themeColor: person.themeColor)
                     
                     VStack(spacing: 12) {
                         Button(action: {
@@ -110,7 +111,7 @@ struct IDView: View {
                             .bold()
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.blue)
+                            .background(person.themeColor)
                             .foregroundColor(.white)
                             .cornerRadius(12)
                         }

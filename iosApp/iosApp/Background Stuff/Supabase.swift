@@ -34,8 +34,6 @@ nonisolated private struct SupabasePersonRow: Codable {
     var name: String?
     var theme: String?
     var bio: String?
-    var ralliesJoined: Int?
-    var rallieNames: [String]?
     var privligeLevel: String?
     var tos: Bool?
     var instaHandle: String?
@@ -47,8 +45,6 @@ nonisolated private struct SupabasePersonRow: Codable {
         case name
         case theme
         case bio
-        case ralliesJoined = "rallies_joined"
-        case rallieNames = "rallie_names"
         case privligeLevel = "privilege_level"
         case tos
         case instaHandle = "insta_handle"
@@ -56,14 +52,14 @@ nonisolated private struct SupabasePersonRow: Codable {
         case phoneNumber = "phone_number"
     }
     
-    var personInfo: PersonInfo {
+    func toPersonInfo(ralliesJoined: Int = 0, rallieNames: [String] = []) -> PersonInfo {
         PersonInfo(
             id: id,
             name: name ?? "",
             theme: theme ?? "Auto",
             bio: bio ?? "",
-            ralliesJoined: ralliesJoined ?? 0,
-            rallieNames: rallieNames ?? [],
+            ralliesJoined: ralliesJoined,
+            rallieNames: rallieNames,
             privligeLevel: privligeLevel ?? "User",
             tos: tos ?? false,
             instaHandle: instaHandle ?? "",
@@ -76,13 +72,7 @@ nonisolated private struct SupabasePersonRow: Codable {
 // MARK: - App Helper Functions
 func fetchCurrentProfile() async throws -> PersonInfo? {
     let session = try await supabase.auth.session
-    let profile: SupabasePersonRow = try await supabase.from("profiles")
-        .select()
-        .eq("id", value: session.user.id.uuidString)
-        .single()
-        .execute()
-        .value
-    return profile.personInfo
+    return try await loadPersonInfo(for: session.user.id)
 }
 
 nonisolated private struct NewSupabasePersonRow: Encodable {
@@ -90,8 +80,6 @@ nonisolated private struct NewSupabasePersonRow: Encodable {
     var name: String
     var theme: String
     var bio: String
-    var ralliesJoined: Int
-    var rallieNames: [String]
     var privligeLevel: String
     var tos: Bool
     var instaHandle: String? = nil
@@ -103,8 +91,6 @@ nonisolated private struct NewSupabasePersonRow: Encodable {
         case name
         case theme
         case bio
-        case ralliesJoined = "rallies_joined"
-        case rallieNames = "rallie_names"
         case privligeLevel = "privilege_level"
         case tos
         case instaHandle = "insta_handle"
@@ -178,8 +164,6 @@ func signup(Name: String, Email: String, Password: String) async -> AuthResult {
             name: Name,
             theme: "Auto",
             bio: "",
-            ralliesJoined: 0,
-            rallieNames: [],
             privligeLevel: "User",
             tos: false
         )
@@ -204,7 +188,34 @@ private func loadPersonInfo(for userID: UUID) async throws -> PersonInfo {
         .execute()
         .value
     
-    return personRow.personInfo
+    struct ParticipantRow: Codable {
+        let rally_id: UUID
+    }
+    
+    let participantRows: [ParticipantRow] = (try? await supabase.from("rally_participants")
+        .select("rally_id")
+        .eq("user_id", value: userID.uuidString)
+        .execute()
+        .value) ?? []
+    
+    let rallyIDs = participantRows.map { $0.rally_id }
+    
+    var rallieNames: [String] = []
+    if !rallyIDs.isEmpty {
+        struct RallyNameRow: Codable {
+            let id: UUID
+            let name: String
+        }
+        let rallyIDStrings = rallyIDs.map { $0.uuidString }
+        let rallyRows: [RallyNameRow] = (try? await supabase.from("rallies")
+            .select("id, name")
+            .in("id", values: rallyIDStrings)
+            .execute()
+            .value) ?? []
+        rallieNames = rallyRows.map { $0.name }
+    }
+    
+    return personRow.toPersonInfo(ralliesJoined: rallieNames.count, rallieNames: rallieNames)
 }
 
 private func loadPersonInfoOrCreateDefault(userID: UUID, name: String) async throws -> PersonInfo {
@@ -216,20 +227,15 @@ private func loadPersonInfoOrCreateDefault(userID: UUID, name: String) async thr
             name: name,
             theme: "Auto",
             bio: "",
-            ralliesJoined: 0,
-            rallieNames: [],
             privligeLevel: "User",
             tos: false
         )
         
-        let insertedPerson: SupabasePersonRow = try await supabase.from("profiles")
+        try await supabase.from("profiles")
             .upsert(newPerson, onConflict: "id")
-            .select()
-            .single()
             .execute()
-            .value
         
-        return insertedPerson.personInfo
+        return try await loadPersonInfo(for: userID)
     }
 }
 

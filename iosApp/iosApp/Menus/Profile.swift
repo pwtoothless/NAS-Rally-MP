@@ -95,7 +95,7 @@ struct ProfileView: View {
                     
                     if !person.instaHandle.isEmpty {
                         Text("@\(person.instaHandle)")
-                            .foregroundColor(.blue)
+                            .foregroundColor(person.themeColor)
                     }
                     if !person.carModel.isEmpty {
                         Text("\(person.carModel)")

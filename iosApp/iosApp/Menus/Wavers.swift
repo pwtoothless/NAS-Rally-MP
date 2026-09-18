@@ -78,7 +78,7 @@ struct WaversView: View {
                                                     Text(rallyName)
                                                         .font(.caption)
                                                         .bold()
-                                                        .foregroundColor(.blue)
+                                                        .foregroundColor(person.themeColor)
                                                 }
                                                 Text(waiver.waiver_name)
                                                     .font(.headline)
@@ -90,7 +90,7 @@ struct WaversView: View {
                                             Spacer()
                                             Image(systemName: "doc.text.fill")
                                                 .font(.title2)
-                                                .foregroundColor(.blue)
+                                                .foregroundColor(person.themeColor)
                                         }
                                         .padding()
                                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -125,7 +125,7 @@ struct WaversView: View {
                                                     Text(rallyName)
                                                         .font(.caption)
                                                         .bold()
-                                                        .foregroundColor(.blue)
+                                                        .foregroundColor(person.themeColor)
                                                 }
                                                 Text(waiver.waiver_name)
                                                     .font(.headline)
@@ -167,6 +167,7 @@ struct WaversView: View {
                 WaiverDetailSheet(
                     waiver: waiver,
                     userId: person.id,
+                    themeColor: person.themeColor,
                     isAlreadySigned: signedWaivers.contains(where: { $0.id == waiver.id }),
                     onSigned: {
                         Task {
@@ -192,7 +193,7 @@ struct WaversView: View {
                 .foregroundColor(selectedTab == index ? .white : .primary)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(selectedTab == index ? Color.blue : Color.clear)
+                        .fill(selectedTab == index ? person.themeColor : Color.clear)
                 )
                 .padding(2)
         }
@@ -215,6 +216,7 @@ struct WaiverDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     let waiver: Waiver
     let userId: UUID
+    var themeColor: Color = .blue
     let isAlreadySigned: Bool
     let onSigned: () -> Void
     
@@ -232,16 +234,16 @@ struct WaiverDetailSheet: View {
                 if let rallyName = waiver.rallies?.name, !rallyName.isEmpty {
                     HStack(spacing: 6) {
                         Image(systemName: "flag.checkered")
-                            .foregroundColor(.blue)
+                            .foregroundColor(themeColor)
                         Text(rallyName)
                             .font(.subheadline)
                             .bold()
-                            .foregroundColor(.blue)
+                            .foregroundColor(themeColor)
                         Spacer()
                     }
                     .padding(.vertical, 6)
                     .padding(.horizontal, 10)
-                    .background(Color.blue.opacity(0.1))
+                    .background(themeColor.opacity(0.1))
                     .cornerRadius(8)
                 }
                 
@@ -272,7 +274,7 @@ struct WaiverDetailSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(isCompleted ? Color.green : Color.blue)
+                    .background(isCompleted ? Color.green : themeColor)
                     .cornerRadius(12)
                 }
                 .disabled(isSigning || isCompleted)

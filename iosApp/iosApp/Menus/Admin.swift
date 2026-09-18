@@ -116,6 +116,7 @@ struct AdminView: View {
                             rallies: rallies,
                             users: users,
                             participants: participants,
+                            person: person,
                             selectedRally: $selectedRally,
                             editingRally: $editingRally,
                             onDeleteRally: { rally in
@@ -171,6 +172,7 @@ struct AdminView: View {
                 user: user,
                 userRequests: requests.filter { $0.user_id == user.id },
                 rallies: rallies,
+                person: person,
                 onUpdate: {
                     Task { await loadAdminData() }
                 }
@@ -192,7 +194,7 @@ struct AdminView: View {
                 .foregroundColor(selectedTab == index ? .white : .primary)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(selectedTab == index ? Color.blue : Color.clear)
+                        .fill(selectedTab == index ? person.themeColor : Color.clear)
                 )
                 .padding(2)
         }
@@ -352,6 +354,7 @@ struct RalliesTabView: View {
     let rallies: [RallyRow]
     let users: [AdminProfile]
     let participants: [RallyParticipantRow]
+    let person: PersonInfo
     @Binding var selectedRally: RallyRow?
     @Binding var editingRally: RallyRow?
     let onDeleteRally: (RallyRow) -> Void
@@ -378,7 +381,7 @@ struct RalliesTabView: View {
                     .font(.subheadline)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.blue)
+                    .background(person.themeColor)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
@@ -401,7 +404,7 @@ struct RalliesTabView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(person.themeColor)
                 }
                 .frame(maxHeight: .infinity)
             } else {
@@ -411,7 +414,7 @@ struct RalliesTabView: View {
                     }) {
                         HStack {
                             Image(systemName: "car.2.fill")
-                                .foregroundColor(.blue)
+                                .foregroundColor(person.themeColor)
                                 .font(.title3)
                                 .padding(.trailing, 4)
                             
@@ -820,11 +823,11 @@ struct RallyDetailSheet: View {
             struct RallyWaiverRow: Decodable {
                 let id: UUID
             }
-            let waiverRows: [RallyWaiverRow] = (try? await supabase.from("waivers")
+            let waiverRows: [RallyWaiverRow] = try await supabase.from("waivers")
                 .select("id")
                 .eq("rally_id", value: idStr)
                 .execute()
-                .value) ?? []
+                .value
             
             if waiverRows.isEmpty {
                 signedUserIds = []
@@ -837,10 +840,10 @@ struct RallyDetailSheet: View {
                 let waiver_id: UUID
                 let user_id: UUID
             }
-            let signedRows: [SignedRow] = (try? await supabase.from("signed_waivers")
+            let signedRows: [SignedRow] = try await supabase.from("signed_waivers")
                 .select("waiver_id, user_id")
                 .execute()
-                .value) ?? []
+                .value
             
             var userSignedWaivers = [UUID: Set<UUID>]()
             for row in signedRows {
@@ -1391,6 +1394,7 @@ struct ApprovalDetailSheet: View {
     let user: AdminProfile
     let userRequests: [RallyRequestRow]
     let rallies: [RallyRow]
+    let person: PersonInfo
     let onUpdate: () -> Void
     
     @State private var showProfile = false
@@ -1425,7 +1429,7 @@ struct ApprovalDetailSheet: View {
                                     approveIndividualRequest(request: request, rally: rally)
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .tint(.blue)
+                                .tint(person.themeColor)
                             }
                         }
                     }
@@ -1444,7 +1448,7 @@ struct ApprovalDetailSheet: View {
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(person.themeColor)
                     
                     Button(action: { showID = true }) {
                         VStack {
@@ -1456,7 +1460,7 @@ struct ApprovalDetailSheet: View {
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(person.themeColor)
                     
                     Button(action: { approveAllRequests() }) {
                         VStack {
@@ -1468,7 +1472,7 @@ struct ApprovalDetailSheet: View {
                         .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(person.themeColor)
                     .disabled(isProcessing || userRequests.isEmpty)
                 }
                 .padding(.horizontal, 16)

@@ -140,10 +140,11 @@ struct RallyUserDetailSheet: View {
     @State private var isSendingRequest = false
     @State private var showToast = false
     @State private var toastMessage = ""
-    
+
     var isJoined: Bool {
         person.rallieNames.contains(rally.name)
     }
+
     
     var body: some View {
         NavigationStack {
@@ -202,7 +203,7 @@ struct RallyUserDetailSheet: View {
                             Text("\(attendeeCount)")
                                 .font(.title3)
                                 .bold()
-                                .foregroundColor(.blue)
+                                .foregroundColor(person.themeColor)
                             
                             Text("Attending")
                                 .font(.caption2)
@@ -223,7 +224,7 @@ struct RallyUserDetailSheet: View {
                         if let start = rally.event_start, let end = rally.event_end, !start.isEmpty {
                             HStack {
                                 Image(systemName: "calendar")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(person.themeColor)
                                 Text("\(start) — \(end)")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
@@ -270,11 +271,11 @@ struct RallyUserDetailSheet: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(isJoined ? Color.gray : Color.blue)
+                    .background(isJoined ? Color.gray : person.themeColor)
                     .cornerRadius(12)
-                    .shadow(color: isJoined ? Color.clear : Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(color: isJoined ? Color.clear : person.themeColor.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .disabled(isJoined || isSendingRequest)
+                .disabled(isSendingRequest)
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             }
@@ -291,7 +292,7 @@ struct RallyUserDetailSheet: View {
                     VStack {
                         HStack {
                             Image(systemName: "paperplane.fill")
-                                .foregroundColor(.blue)
+                                .foregroundColor(person.themeColor)
                             Text(toastMessage)
                                 .font(.subheadline)
                                 .bold()
@@ -299,7 +300,7 @@ struct RallyUserDetailSheet: View {
                         }
                         .padding()
                         .background(RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.3), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(person.themeColor.opacity(0.3), lineWidth: 1))
                         .padding()
                         .transition(.move(edge: .top).combined(with: .opacity))
                         

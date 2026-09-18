@@ -10,6 +10,7 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import io.ktor.util.toUpperCasePreservingASCIIRules
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -45,8 +46,45 @@ suspend fun loadPersonInfo(userId: String): PersonInfo? {
                     eq("id", userId)
                 }
             }
-            .decodeSingleOrNull<SupabasePersonRow>()
-        row?.toPersonInfo()
+            .decodeSingleOrNull<SupabasePersonRow>() ?: return null
+
+        @Serializable
+        data class ParticipantRow(val rally_id: String)
+
+        val participantRows = try {
+            supabase.from("rally_participants")
+                .select(Columns.raw("rally_id")) {
+                    filter {
+                        eq("user_id", userId)
+                    }
+                }
+                .decodeList<ParticipantRow>()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val rallyIds = participantRows.map { it.rally_id }
+        val rallieNames = if (rallyIds.isNotEmpty()) {
+            @Serializable
+            data class RallyNameRow(val id: String, val name: String)
+
+            try {
+                supabase.from("rallies")
+                    .select(Columns.raw("id, name")) {
+                        filter {
+                            isIn("id", rallyIds)
+                        }
+                    }
+                    .decodeList<RallyNameRow>()
+                    .map { it.name }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+
+        row.toPersonInfo(ralliesJoined = rallieNames.size, rallieNames = rallieNames)
     } catch (e: Exception) {
         println("Error loading person info: ${e.message}")
         null
@@ -62,19 +100,13 @@ suspend fun loadPersonInfoOrCreateDefault(userId: String, name: String): PersonI
         name = name,
         theme = "Auto",
         bio = "",
-        ralliesJoined = 0,
-        rallieNames = emptyList(),
         privligeLevel = "User",
         tos = false
     )
 
     return try {
-        val inserted = supabase.from("profiles")
-            .upsert(newPerson) {
-                select()
-            }
-            .decodeSingle<SupabasePersonRow>()
-        inserted.toPersonInfo()
+        supabase.from("profiles").upsert(newPerson)
+        loadPersonInfo(userId) ?: PersonInfo(id = userId, name = name)
     } catch (e: Exception) {
         PersonInfo(id = userId, name = name)
     }
@@ -114,8 +146,6 @@ suspend fun signup(nameInput: String, emailInput: String, passwordInput: String)
             name = nameInput,
             theme = "Auto",
             bio = "",
-            ralliesJoined = 0,
-            rallieNames = emptyList(),
             privligeLevel = "User",
             tos = false
         )
@@ -224,7 +254,7 @@ suspend fun fetchUserWaivers(userId: String): UserWaiversResult {
 
 suspend fun fetchUserIDImageData(userId: String): ByteArray? {
     return try {
-        supabase.storage.from("User-IDs").downloadAuthenticated("$userId/userid.png")
+        supabase.storage.from("User-IDs").downloadAuthenticated("${userId.toUpperCasePreservingASCIIRules()}/userid.png")
     } catch (e: Exception) {
         println("Download ID image failed: ${e.message}")
         null

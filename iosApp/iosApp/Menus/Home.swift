@@ -56,7 +56,7 @@ struct HomeView: View {
             guard !person.isTestUser else { return }
 
             do {
-                self.profileImageURL = try await getProfileImageURL(for: person.id)
+                self.profileImageURL = try getProfileImageURL(for: person.id)
             } catch {
                 print("Failed to load image URL: \(error)")
             }

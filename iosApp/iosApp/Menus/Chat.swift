@@ -98,7 +98,8 @@ struct MessageThreadView: View {
                     ForEach(viewModel.messages.reversed()) { message in
                         MessageBubble(
                             message: message,
-                            isCurrentUser: message.senderId == person.id
+                            isCurrentUser: message.senderId == person.id,
+                            themeColor: person.themeColor
                         )
                         .id(message.id)
                     }
@@ -228,7 +229,7 @@ struct MessageThreadView: View {
                     .foregroundStyle(
                         messageInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         ? Color.gray.opacity(0.4)
-                        : Color.blue
+                        : person.themeColor
                     )
             }
             .disabled(messageInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -259,6 +260,7 @@ struct MessageThreadView: View {
 struct MessageBubble: View {
     let message: Message
     let isCurrentUser: Bool
+    var themeColor: Color = .blue
     
     var body: some View {
         HStack {
@@ -269,7 +271,9 @@ struct MessageBubble: View {
                     .font(.body)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(isCurrentUser ? Color.blue : Color(uiColor: .secondarySystemBackground))
+                    .background(isCurrentUser ? themeColor : Color(uiColor: .secondarySystemBackground))
+                    .foregroundColor(isCurrentUser ? .white : .primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .foregroundColor(isCurrentUser ? .white : .primary)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 
