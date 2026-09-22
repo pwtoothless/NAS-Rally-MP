@@ -195,9 +195,18 @@ fun IDView(person: PersonInfo) {
                     isUploading = true
                     scope.launch {
                         try {
-                            val path = "${person.id}/userid.png"
-                            supabase.storage.from("User-IDs").upload(path, bytes) {
-                                upsert = true
+                            val path = "${person.id.uppercase()}/userid.png"
+                            try {
+                                supabase.storage.from("User-IDs").delete(listOf(path))
+                            } catch (_: Exception) {
+                                // Ignore if file didn't exist
+                            }
+                            try {
+                                supabase.storage.from("User-IDs").upload(path, bytes) {
+                                    upsert = true
+                                }
+                            } catch (_: Exception) {
+                                supabase.storage.from("User-IDs").update(path, bytes)
                             }
                             toastMessage = "ID uploaded successfully!"
                             isError = false

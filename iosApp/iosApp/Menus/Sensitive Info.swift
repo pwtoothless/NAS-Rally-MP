@@ -208,13 +208,27 @@ struct IDView: View {
                 
                 let path = "\(person.id.uuidString)/userid.png"
                 
-                try await supabase.storage
-                    .from("User-IDs")
-                    .upload(
-                        path,
-                        data: imageData,
-                        options: FileOptions(contentType: "image/png", upsert: true)
-                    )
+                // Ensure any existing ID document is removed before uploading the new one
+                _ = try? await supabase.storage.from("User-IDs").remove(paths: [path])
+                
+                do {
+                    try await supabase.storage
+                        .from("User-IDs")
+                        .upload(
+                            path,
+                            data: imageData,
+                            options: FileOptions(contentType: "image/png", upsert: true)
+                        )
+                } catch {
+                    // Fallback to update if upload fails (e.g., if removal failed or file exists)
+                    try await supabase.storage
+                        .from("User-IDs")
+                        .update(
+                            path,
+                            data: imageData,
+                            options: FileOptions(contentType: "image/png", upsert: true)
+                        )
+                }
                 
                 toastMessage = "ID uploaded successfully!"
                 isError = false

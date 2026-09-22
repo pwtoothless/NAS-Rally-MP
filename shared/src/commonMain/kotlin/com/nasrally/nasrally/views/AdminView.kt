@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -1517,7 +1518,9 @@ fun UserProfileDetailDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
+                            .rotate(90f)
                             .clip(RoundedCornerShape(12.dp)),
+
                         contentScale = ContentScale.Fit
                     )
                 } else {

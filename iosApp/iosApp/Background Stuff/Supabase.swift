@@ -345,3 +345,49 @@ func fetchUserWaivers(for userID: UUID) async throws -> UserWaiversResult {
     
     return UserWaiversResult(pending: pending, signed: signed)
 }
+
+// MARK: - AI Summarization
+
+struct AISummaryResponse: Codable {
+    let summary: String?
+    let error: String?
+}
+
+func fetchAISummary() async throws -> String {
+    // 1. Get current session to pass token
+    let session = try await supabase.auth.session
+    let accessToken = session.accessToken
+    
+    // 2. Build Request
+    guard let url = URL(string: "https://api-nas-rally.mayflower-paradise.us/functions/v1/ai-summarization") else {
+        throw URLError(.badURL)
+    }
+    
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    // 3. Send Request
+    let (data, response) = try await URLSession.shared.data(for: request)
+    
+    guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response string"
+        print("Edge Function Error - Status: \(statusCode), Body: \(responseString)")
+        
+        if let errorResponse = try? JSONDecoder().decode(AISummaryResponse.self, from: data), let errorMessage = errorResponse.error {
+             throw NSError(domain: "SupabaseEdgeFunction", code: 1, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+        }
+        throw URLError(.badServerResponse)
+    }
+    
+    let result = try JSONDecoder().decode(AISummaryResponse.self, from: data)
+    
+    guard let summary = result.summary else {
+        throw NSError(domain: "SupabaseEdgeFunction", code: 2, userInfo: [NSLocalizedDescriptionKey: "No summary returned"])
+    }
+    
+    return summary
+}
+
