@@ -158,7 +158,7 @@ struct HomeView: View {
                 shouldFetch = true
             } else {
                 shouldFetch = false
-                print("Manual refresh restricted: Wait 30 mins between fetches.")
+                print("Manual refresh restricted: Wait 30 mins between fetches. (Current wait: \(Int(1800 - timeSinceLastFetch)) seconds left)")
             }
         } else {
             // Auto fetch if no cache or older than 6 hours
