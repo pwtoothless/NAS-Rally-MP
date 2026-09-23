@@ -176,12 +176,24 @@ struct HomeView: View {
             return
         }
         
-        // Perform Fetch
-        isLoadingSummary = true
-        defer { isLoadingSummary = false }
+        // Perform Fetch. If it's a manual refresh, the pull-to-refresh spinner is already showing, 
+        // so we don't need the shimmering gradient (which can cause view redrawing and cancel the task).
+        if !forceRefresh {
+            isLoadingSummary = true
+        }
+        
+        defer { 
+            if !forceRefresh {
+                isLoadingSummary = false 
+            }
+        }
         
         do {
-            let fetchedSummary = try await fetchAISummary()
+            // We use a detached task to completely prevent SwiftUI from cancelling the network request 
+            // if the view redraws or the user scrolls away during the pull-to-refresh.
+            let fetchedSummary = try await Task.detached {
+                return try await fetchAISummary()
+            }.value
             
             // Save to cache
             defaults.set(now, forKey: lastFetchKey)
@@ -190,7 +202,7 @@ struct HomeView: View {
             self.aiSummary = fetchedSummary
         } catch {
             print("Failed to fetch AI Summary: \(error)")
-            // Fallback to cache if error
+            // Fallback to cache if error, unless the error was a cancellation (which shouldn't happen anymore)
             if let cached = cachedSummary {
                 self.aiSummary = cached
             } else {
