@@ -16,7 +16,7 @@ struct ProfileView: View {
     @State private var phoneNumberInput: String = ""
     @State private var imageSelection: PhotosPickerItem? = nil
     @State private var isSaving: Bool = false
-    @State private var profileImageURL: URL? = nil
+    @State private var profileImageData: Data? = nil
     
     var body: some View {
         VStack {
@@ -61,20 +61,17 @@ struct ProfileView: View {
             .padding()
             
             VStack(spacing: 20) {
-                AsyncImage(url: profileImageURL) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView().frame(width: 100, height: 100)
-                    case .success(let image):
-                        image.resizable().scaledToFill().frame(width: 100, height: 100).clipShape(Circle())
-                    case .failure:
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .foregroundStyle(.gray)
-                            .frame(width: 100, height: 100)
-                    @unknown default:
-                        EmptyView()
-                    }
+                if let data = profileImageData, let uiImage = UIImage(data: data) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .foregroundStyle(.gray)
+                        .frame(width: 100, height: 100)
                 }
                 
                 if editMode {
@@ -124,12 +121,7 @@ struct ProfileView: View {
         }
         .task {
             guard !person.isTestUser else { return }
-
-            do {
-                self.profileImageURL = try getProfileImageURL(for: person.id)
-            } catch {
-                print("Failed to load image URL: \(error)")
-            }
+            self.profileImageData = await getCachedProfileImageData(for: person.id)
         }
     }
     

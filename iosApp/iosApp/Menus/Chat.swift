@@ -24,29 +24,10 @@ struct ChatView: View {
                     groupName: rally.name
                 )) {
                     HStack(spacing: 12) {
-                        AsyncImage(url: try? getRallyImageURL(for: rally.name)) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 48, height: 48)
-                                    .clipShape(Circle())
-                            case .failure(_):
-                                Image(systemName: "car.circle.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 48, height: 48)
-                                    .foregroundColor(.gray)
-                                    .opacity(0.5)
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 48, height: 48)
-                            @unknown default:
-                                ProgressView()
-                                    .frame(width: 48, height: 48)
-                            }
-                        }
+                        CachedRallyLogoView(name: rally.name)
+                            .scaledToFill()
+                            .frame(width: 48, height: 48)
+                            .clipShape(Circle())
                         
                         Text(rally.name)
                             .font(.body)
@@ -151,30 +132,12 @@ struct MessageThreadView: View {
         ZStack {
             // Center: Avatar + Group Name Pill
             VStack(spacing: 4) {
-                AsyncImage(url: try? getRallyImageURL(for: groupName)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 50, height: 50)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
-                            .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-                    case .failure(_):
-                        Image(systemName: "car.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 44, height: 44)
-                            .foregroundColor(.gray)
-                    case .empty:
-                        ProgressView()
-                            .frame(width: 44, height: 44)
-                    @unknown default:
-                        ProgressView()
-                            .frame(width: 44, height: 44)
-                    }
-                }
+                CachedRallyLogoView(name: groupName)
+                    .scaledToFit()
+                    .frame(width: 50, height: 50)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
 
                 Text(groupName)
                     .font(.system(size: 14, weight: .semibold))

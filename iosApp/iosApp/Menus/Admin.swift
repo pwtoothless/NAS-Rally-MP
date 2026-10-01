@@ -543,42 +543,12 @@ struct RallyDetailSheet: View {
             ZStack {
                 VStack(spacing: 0) {
                     VStack(spacing: 12) {
-                        AsyncImage(url: try? getRallyImageURL(for: rally.name)) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                    .shadow(radius: 4)
-                            case .failure:
-                                Image(systemName: "car.fill")
-                                    .font(.title)
-                                    .foregroundColor(.gray)
-                                    .opacity(0.3)
-                                    .frame(width: 80, height: 80)
-                                    .background(Circle().fill(Color.gray.opacity(0.1)))
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                    .shadow(radius: 4)
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 80, height: 80)
-                                    .background(Circle().fill(Color.gray.opacity(0.1)))
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                    .shadow(radius: 4)
-                            @unknown default:
-                                ProgressView()
-                                    .frame(width: 80, height: 80)
-                                    .background(Circle().fill(Color.gray.opacity(0.1)))
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                    .shadow(radius: 4)
-                            }
-                        }
+                        CachedRallyLogoView(name: rally.name)
+                            .scaledToFill()
+                            .frame(width: 80, height: 80)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .shadow(radius: 4)
                         
                         Text(rally.name)
                             .font(.title2)
@@ -987,34 +957,9 @@ struct AddPeopleSheet: View {
         NavigationStack {
             List(eligibleUsers) { user in
                 HStack {
-                    AsyncImage(url: try? getProfileImageURL(for: user.id)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 40, height: 40)
-                                .clipShape(Circle())
-                        case .failure(_):
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .frame(width: 40, height: 40)
-                                .foregroundColor(.gray)
-                                .opacity(0.5)
-                        case .empty:
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .frame(width: 40, height: 40)
-                                .foregroundColor(.gray)
-                                .opacity(0.5)
-                        @unknown default:
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .frame(width: 40, height: 40)
-                                .foregroundColor(.gray)
-                                .opacity(0.5)
-                        }
-                    }
+                    CachedProfileImageView(userID: user.id)
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
                     
                     Text(user.name)
                         .font(.body)
@@ -1202,26 +1147,9 @@ struct UserProfileDetailSheet: View {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(spacing: 20) {
-                        AsyncImage(url: profileImageURL) { phase in
-                            switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 100, height: 100)
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 100, height: 100)
-                                    .clipShape(Circle())
-                            case .failure:
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .foregroundStyle(.gray)
-                                    .frame(width: 100, height: 100)
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
+                        CachedProfileImageView(userID: user.id)
+                            .frame(width: 100, height: 100)
+                            .clipShape(Circle())
                         
                         VStack(spacing: 8) {
                             Text(user.name)
@@ -1326,20 +1254,12 @@ struct UserProfileDetailSheet: View {
                 }
             }
             .task {
-                do {
-                    self.profileImageURL = try getProfileImageURL(for: user.id)
-                } catch {
-                    print("Failed to load profile image URL: \(error)")
-                }
-                
                 isLoadingID = true
-                do {
-                    let data = try await fetchUserIDImageData(for: user.id)
+                let adminPerson = PersonInfo(id: user.id, name: "", theme: "", bio: "", privligeLevel: "Admin", tos: true, instaHandle: "", carModel: "", phoneNumber: "")
+                if let data = await getCachedUserIDImageData(for: user.id, currentUser: adminPerson) {
                     if let image = UIImage(data: data) {
                         self.idImage = image
                     }
-                } catch {
-                    print("Failed to download ID image: \(error)")
                 }
                 isLoadingID = false
             }
@@ -1652,13 +1572,11 @@ struct MockIDSheet: View {
             }
             .task {
                 isLoading = true
-                do {
-                    let data = try await fetchUserIDImageData(for: userId)
+                let adminPerson = PersonInfo(id: userId, name: "", theme: "", bio: "", privligeLevel: "Admin", tos: true, instaHandle: "", carModel: "", phoneNumber: "")
+                if let data = await getCachedUserIDImageData(for: userId, currentUser: adminPerson) {
                     if let image = UIImage(data: data) {
                         self.idImage = image
                     }
-                } catch {
-                    print("Failed to download ID image: \(error)")
                 }
                 isLoading = false
             }
@@ -2158,18 +2076,13 @@ struct EditRallySheet: View {
                                 }
                                 .padding(.vertical, 4)
                             } else {
-                                AsyncImage(url: try? getRallyImageURL(for: rally.name)) { phase in
-                                    if let image = phase.image {
-                                        HStack {
-                                            Spacer()
-                                            image
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(maxHeight: 120)
-                                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            Spacer()
-                                        }
-                                    }
+                                HStack {
+                                    Spacer()
+                                    CachedRallyLogoView(name: rally.name)
+                                        .scaledToFit()
+                                        .frame(maxHeight: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    Spacer()
                                 }
                             }
                         } else {

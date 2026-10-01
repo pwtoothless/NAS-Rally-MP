@@ -132,8 +132,8 @@ fun ProfileView(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AsyncImage(
-                url = profileImageUrl,
+            CachedProfileImage(
+                userId = person.id,
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

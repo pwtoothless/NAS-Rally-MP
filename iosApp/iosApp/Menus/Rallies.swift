@@ -45,31 +45,11 @@ struct RalliesView: View {
                             selectedRally = rally
                         }) {
                             HStack(spacing: 14) {
-                                AsyncImage(url: try? getRallyImageURL(for: rally.name)) { phase in
-                                    switch phase {
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 50, height: 50)
-                                            .clipShape(Circle())
-                                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                                    case .failure(_):
-                                        Image(systemName: "car.circle.fill")
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 50, height: 50)
-                                            .foregroundColor(.gray)
-                                            .opacity(0.5)
-                                            .clipShape(Circle())
-                                    case .empty:
-                                        ProgressView()
-                                            .frame(width: 50, height: 50)
-                                    @unknown default:
-                                        ProgressView()
-                                            .frame(width: 50, height: 50)
-                                    }
-                                }
+                                CachedRallyLogoView(name: rally.name)
+                                    .scaledToFit()
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(rally.name)
@@ -150,39 +130,12 @@ struct RallyUserDetailSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
-                    AsyncImage(url: try? getRallyImageURL(for: rally.name)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 90, height: 90)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.2), lineWidth: 1))
-                                .shadow(radius: 4)
-                        case .failure(_):
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                                .opacity(0.3)
-                                .frame(width: 90, height: 90)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(Color.gray.opacity(0.1)))
-                        case .empty:
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                                .opacity(0.3)
-                                .frame(width: 90, height: 90)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(Color.gray.opacity(0.1)))
-                        @unknown default:
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                                .opacity(0.3)
-                                .frame(width: 90, height: 90)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(Color.gray.opacity(0.1)))
-                        }
-                    }
+                    CachedRallyLogoView(name: rally.name)
+                        .scaledToFit()
+                        .frame(width: 90, height: 90)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                        .shadow(radius: 4)
                     
                     Spacer()
                     

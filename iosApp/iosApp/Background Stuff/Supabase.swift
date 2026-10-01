@@ -293,6 +293,82 @@ func getRallyImageURL(for name: String) throws -> URL {
         .getPublicURL(path: name + ".png")
 }
 
+// MARK: - Cached Fetch Helpers
+
+func getCachedRallyLogoData(for name: String) async -> Data? {
+    guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+    let sanitized = name.replacingOccurrences(of: "[^a-zA-Z0-9_-]", with: "_", options: .regularExpression)
+    let key = "rally_logo_\(sanitized).png"
+    let oneWeekSeconds: TimeInterval = 7 * 24 * 60 * 60
+
+    if let timestamp = CacheManager.shared.getTimestamp(forKey: key),
+       Date().timeIntervalSince(timestamp) < oneWeekSeconds,
+       let cachedData = CacheManager.shared.getData(forKey: key) {
+        return cachedData
+    }
+
+    guard let url = try? getRallyImageURL(for: name) else {
+        return CacheManager.shared.getData(forKey: key)
+    }
+
+    do {
+        let (data, response) = try await URLSession.shared.data(from: url)
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200, !data.isEmpty {
+            CacheManager.shared.saveData(data, forKey: key)
+            CacheManager.shared.saveTimestamp(Date(), forKey: key)
+            return data
+        }
+    } catch {
+        print("Error fetching rally logo for \(name): \(error)")
+    }
+
+    return CacheManager.shared.getData(forKey: key)
+}
+
+func getCachedProfileImageData(for userID: UUID) async -> Data? {
+    let key = "profile_\(userID.uuidString).jpg"
+    if let cached = CacheManager.shared.getData(forKey: key), !cached.isEmpty {
+        return cached
+    }
+
+    guard let url = try? getProfileImageURL(for: userID) else { return nil }
+
+    do {
+        let (data, response) = try await URLSession.shared.data(from: url)
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200, !data.isEmpty {
+            CacheManager.shared.saveData(data, forKey: key)
+            return data
+        }
+    } catch {
+        print("Error fetching profile image for \(userID): \(error)")
+    }
+
+    return nil
+}
+
+func invalidateCachedProfileImage(for userID: UUID) {
+    CacheManager.shared.removeData(forKey: "profile_\(userID.uuidString).jpg")
+}
+
+func getCachedUserIDImageData(for userID: UUID, currentUser: PersonInfo) async -> Data? {
+    guard currentUser.privligeLevel == "Admin" else { return nil }
+    let key = "id_\(userID.uuidString.uppercased()).png"
+    if let cached = CacheManager.shared.getData(forKey: key), !cached.isEmpty {
+        return cached
+    }
+
+    do {
+        let downloaded = try await fetchUserIDImageData(for: userID)
+        if !downloaded.isEmpty {
+            CacheManager.shared.saveData(downloaded, forKey: key)
+        }
+        return downloaded
+    } catch {
+        print("Error downloading user ID image for \(userID): \(error)")
+        return nil
+    }
+}
+
 // MARK: - Waiver Models
 
 struct WaiverRallyInfo: Codable {

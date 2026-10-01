@@ -136,8 +136,8 @@ fun ChatView(person: PersonInfo) {
                                         .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    AsyncImage(
-                                        url = getRallyImageURL(group.name ?: ""),
+                                    CachedRallyLogoImage(
+                                        rallyName = group.name ?: "",
                                         contentDescription = group.name,
                                         modifier = Modifier
                                             .size(50.dp)
@@ -217,8 +217,8 @@ fun MessageThreadView(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                AsyncImage(
-                    url = getRallyImageURL(groupName),
+                CachedRallyLogoImage(
+                    rallyName = groupName,
                     contentDescription = groupName,
                     modifier = Modifier
                         .size(40.dp)

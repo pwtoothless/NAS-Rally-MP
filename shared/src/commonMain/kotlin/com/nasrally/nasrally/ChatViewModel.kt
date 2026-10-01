@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -28,9 +30,33 @@ class ChatViewModel(private val groupId: String, private val scope: CoroutineSco
     private val pageSize = 50
     private var currentPage = 0
     private var canLoadMore = true
+    private val cacheKey = "chat_messages_$groupId"
 
     init {
+        loadCachedMessages()
         setupRealtimeSubscription()
+    }
+
+    private fun loadCachedMessages() {
+        val cachedJson = LocalCache.getString(cacheKey) ?: return
+        try {
+            val cachedList = Json.decodeFromString<List<Message>>(cachedJson)
+            if (cachedList.isNotEmpty()) {
+                _messages.value = cachedList.take(50)
+            }
+        } catch (e: Exception) {
+            println("Error decoding cached messages: ${e.message}")
+        }
+    }
+
+    private fun saveCachedMessages(list: List<Message>) {
+        try {
+            val top50 = list.take(50)
+            val jsonStr = Json.encodeToString(top50)
+            LocalCache.setString(cacheKey, jsonStr)
+        } catch (e: Exception) {
+            println("Error saving cached messages: ${e.message}")
+        }
     }
 
     private fun setupRealtimeSubscription() {
@@ -49,6 +75,7 @@ class ChatViewModel(private val groupId: String, private val scope: CoroutineSco
                 if (current.none { it.id == newMessage.id }) {
                     current.add(0, newMessage)
                     _messages.value = current
+                    saveCachedMessages(current)
                 }
             }
         }
@@ -74,8 +101,13 @@ class ChatViewModel(private val groupId: String, private val scope: CoroutineSco
             if (fetched.size < pageSize) canLoadMore = false
 
             val current = if (isRefresh) mutableListOf() else _messages.value.toMutableList()
-            current.addAll(fetched)
+            // Avoid duplicates when appending
+            val existingIds = current.map { it.id }.toSet()
+            val newUnique = fetched.filter { it.id !in existingIds }
+            current.addAll(newUnique)
+
             _messages.value = current
+            saveCachedMessages(current)
             currentPage++
         } catch (e: Exception) {
             println("Fetch error: ${e.message}")
@@ -96,11 +128,13 @@ class ChatViewModel(private val groupId: String, private val scope: CoroutineSco
         val current = _messages.value.toMutableList()
         current.add(0, newMessage)
         _messages.value = current
+        saveCachedMessages(current)
 
         try {
             supabase.from("messages").insert(newMessage)
         } catch (e: Exception) {
             _messages.value = _messages.value.filter { it.id != newMessage.id }
+            saveCachedMessages(_messages.value)
         }
     }
 }

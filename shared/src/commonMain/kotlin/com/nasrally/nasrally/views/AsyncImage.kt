@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import com.nasrally.nasrally.getCachedProfileImageData
+import com.nasrally.nasrally.getCachedRallyLogoData
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
@@ -101,5 +103,79 @@ fun AsyncImage(
         } else {
             error()
         }
+    }
+}
+
+@Composable
+fun CachedRallyLogoImage(
+    rallyName: String?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    loading: @Composable () -> Unit = {},
+    error: @Composable () -> Unit = {}
+) {
+    var byteArray by remember(rallyName) { mutableStateOf<ByteArray?>(null) }
+    var isLoading by remember(rallyName) { mutableStateOf(true) }
+
+    LaunchedEffect(rallyName) {
+        if (!rallyName.isNullOrBlank()) {
+            isLoading = true
+            byteArray = getCachedRallyLogoData(rallyName)
+            isLoading = false
+        } else {
+            byteArray = null
+            isLoading = false
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) { loading() }
+    } else {
+        AsyncImage(
+            byteArray = byteArray,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale,
+            loading = loading,
+            error = error
+        )
+    }
+}
+
+@Composable
+fun CachedProfileImage(
+    userId: String?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    loading: @Composable () -> Unit = {},
+    error: @Composable () -> Unit = {}
+) {
+    var byteArray by remember(userId) { mutableStateOf<ByteArray?>(null) }
+    var isLoading by remember(userId) { mutableStateOf(true) }
+
+    LaunchedEffect(userId) {
+        if (!userId.isNullOrBlank()) {
+            isLoading = true
+            byteArray = getCachedProfileImageData(userId)
+            isLoading = false
+        } else {
+            byteArray = null
+            isLoading = false
+        }
+    }
+
+    if (isLoading) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) { loading() }
+    } else {
+        AsyncImage(
+            byteArray = byteArray,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale,
+            loading = loading,
+            error = error
+        )
     }
 }

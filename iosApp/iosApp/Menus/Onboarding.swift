@@ -72,6 +72,8 @@ struct OnboardingView: View {
                     person.instaHandle = instaHandleInput
                     person.carModel = carModelInput
                     person.bio = bioInput
+
+                    // Send them to Home Page View after sending all of this info to Supabase including tos
                 }
             }
         }
@@ -90,12 +92,13 @@ struct TOSView: View {
             Spacer()
             
             Button("Decline") {
+                // If person declines tell them they need to accept to use the app. Use a notif box with an ok button SwiftUI.
             }
             .buttonStyle(.bordered)
             
             Button("Accept") {
                 person.tos = true
-                // OnboardingView(person: person)
+                // OnboardingView(person: person) Send to view above
             }
             .buttonStyle(.borderedProminent)
         }

@@ -10,11 +10,22 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsBytes
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.util.toUpperCasePreservingASCIIRules
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.jetbrains.compose.resources.decodeToImageBitmap
 
 val supabase = createSupabaseClient(
     supabaseUrl = "https://api-nas-rally.mayflower-paradise.us",
@@ -204,13 +215,11 @@ suspend fun updateProfile(person: PersonInfo) {
 }
 
 suspend fun getProfileImageURL(userId: String): String? {
+    if (userId.isBlank()) return null
     return try {
-        supabase.storage.from("Profile Pictures").createSignedUrl(
-            path = "$userId/images/profile.jpg",
-            expiresIn = 60.minutes
-        )
+        supabase.storage.from("Profile Pictures").publicUrl("$userId".toUpperCasePreservingASCIIRules()+"/images/profile.jpg")
     } catch (e: Exception) {
-        println("Error creating signed URL for profile picture: ${e.message}")
+        println("Error getting public URL for profile picture: ${e.message}")
         null
     }
 }
@@ -261,6 +270,115 @@ suspend fun fetchUserIDImageData(userId: String): ByteArray? {
     }
 }
 
+private val imageHttpClient = HttpClient()
+
+suspend fun getCachedRallyLogoData(name: String): ByteArray? {
+    if (name.isBlank()) return null
+    val sanitized = name.replace("[^a-zA-Z0-9_-]".toRegex(), "_")
+    val key = "rally_logo_$sanitized.png"
+    val tsKey = "ts_rally_logo_$sanitized"
+    val lastTs = LocalDiskCache.getTimestamp(tsKey)
+    val now = Clock.System.now().toEpochMilliseconds()
+    val oneWeekMs = 7 * 24 * 60 * 60 * 1000L
+
+    if (lastTs != null && (now - lastTs < oneWeekMs)) {
+        val cached = LocalDiskCache.getBytes(key)
+        if (cached != null && cached.isNotEmpty()) {
+            try {
+                cached.decodeToImageBitmap()
+                return cached
+            } catch (_: Exception) {
+                LocalDiskCache.remove(key)
+            }
+        }
+    }
+
+    return try {
+        val url = getRallyImageURL(name)
+        val response = imageHttpClient.get(url)
+        if (response.status.value in 200..299) {
+            val bytes = response.bodyAsBytes()
+            if (bytes.isNotEmpty()) {
+                try {
+                    bytes.decodeToImageBitmap()
+                    LocalDiskCache.saveBytes(key, bytes)
+                    LocalDiskCache.saveTimestamp(tsKey, now)
+                    return bytes
+                } catch (_: Exception) {}
+            }
+        }
+        null
+    } catch (e: Exception) {
+        println("Error downloading rally logo ($name): ${e.message}")
+        val cached = LocalDiskCache.getBytes(key)
+        if (cached != null && cached.isNotEmpty()) {
+            try {
+                cached.decodeToImageBitmap()
+                return cached
+            } catch (_: Exception) {
+                LocalDiskCache.remove(key)
+                null
+            }
+        } else null
+    }
+}
+
+suspend fun getCachedProfileImageData(userId: String): ByteArray? {
+    if (userId.isBlank()) return null
+    val key = "profile_$userId.jpg"
+    val cached = LocalDiskCache.getBytes(key)
+    if (cached != null && cached.isNotEmpty()) {
+        try {
+            cached.decodeToImageBitmap()
+            return cached
+        } catch (_: Exception) {
+            LocalDiskCache.remove(key)
+        }
+    }
+
+    val url = getProfileImageURL(userId) ?: return null
+    return try {
+        val response = imageHttpClient.get(url)
+        if (response.status.value in 200..299) {
+            val bytes = response.bodyAsBytes()
+            if (bytes.isNotEmpty()) {
+                try {
+                    bytes.decodeToImageBitmap()
+                    LocalDiskCache.saveBytes(key, bytes)
+                    return bytes
+                } catch (_: Exception) {}
+            }
+        } else {
+            println("Profile image download returned HTTP ${response.status.value} for user $userId")
+        }
+        null
+    } catch (e: Exception) {
+        println("Error downloading profile image ($userId): ${e.message}")
+        null
+    }
+}
+
+fun invalidateCachedProfileImage(userId: String) {
+    if (userId.isNotBlank()) {
+        LocalDiskCache.remove("profile_$userId.jpg")
+    }
+}
+
+suspend fun getCachedUserIDImageData(userId: String, isAdmin: Boolean): ByteArray? {
+    if (!isAdmin || userId.isBlank()) return null
+    val key = "id_${userId.toUpperCasePreservingASCIIRules()}.png"
+    val cached = LocalDiskCache.getBytes(key)
+    if (cached != null && cached.isNotEmpty()) {
+        return cached
+    }
+
+    val downloaded = fetchUserIDImageData(userId)
+    if (downloaded != null && downloaded.isNotEmpty()) {
+        LocalDiskCache.saveBytes(key, downloaded)
+    }
+    return downloaded
+}
+
 suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
     return try {
         val rows = supabase.from("sensitiveInfo")
@@ -276,3 +394,33 @@ suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
 suspend fun saveSensitiveInfo(row: SensitiveInfoRow) {
     supabase.from("sensitiveInfo").upsert(row)
 }
+
+@Serializable
+data class AISummaryResponse(
+    val summary: String? = null,
+    val error: String? = null
+)
+
+suspend fun fetchAISummary(): String {
+    val session = supabase.auth.currentSessionOrNull() ?: throw IllegalStateException("Not logged in")
+    val accessToken = session.accessToken
+
+    val client = HttpClient()
+    return try {
+        val response: HttpResponse = client.post("https://api-nas-rally.mayflower-paradise.us/functions/v1/ai-summarization") {
+            header(HttpHeaders.Authorization, "Bearer $accessToken")
+            header(HttpHeaders.ContentType, "application/json")
+        }
+        val text = response.bodyAsText()
+        if (response.status.value == 200) {
+            val parsed = Json.decodeFromString<AISummaryResponse>(text)
+            parsed.summary ?: throw IllegalStateException("No summary returned")
+        } else {
+            val parsed = runCatching { Json.decodeFromString<AISummaryResponse>(text) }.getOrNull()
+            throw IllegalStateException(parsed?.error ?: "Server error: ${response.status.value}")
+        }
+    } finally {
+        client.close()
+    }
+}
+

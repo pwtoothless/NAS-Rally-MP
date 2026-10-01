@@ -142,8 +142,8 @@ fun RalliesView(person: PersonInfo) {
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AsyncImage(
-                                url = getRallyImageURL(rally.name),
+                            CachedRallyLogoImage(
+                                rallyName = rally.name,
                                 contentDescription = rally.name,
                                 modifier = Modifier
                                     .size(50.dp)
@@ -251,8 +251,8 @@ fun RallyUserDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AsyncImage(
-                        url = getRallyImageURL(rally.name),
+                    CachedRallyLogoImage(
+                        rallyName = rally.name,
                         contentDescription = rally.name,
                         modifier = Modifier
                             .size(70.dp)

@@ -99,8 +99,8 @@ private fun LoginContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            AsyncImage(
-                url = rallyLogoUrl,
+            CachedRallyLogoImage(
+                rallyName = "NAS Rally",
                 contentDescription = "NAS Rally Logo",
                 modifier = Modifier
                     .width(300.dp)
@@ -253,8 +253,8 @@ private fun SignupContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        AsyncImage(
-            url = rallyLogoUrl,
+        CachedRallyLogoImage(
+            rallyName = "NAS Rally",
             contentDescription = "NAS Rally Logo",
             modifier = Modifier
                 .width(300.dp)

@@ -7,7 +7,7 @@ import SwiftUI
 
 struct HomeView: View {
     @Binding var person: PersonInfo
-    @State private var profileImageURL: URL? = nil
+    @State private var profileImageData: Data? = nil
     
     // AI Summary State
     @State private var aiSummary: String? = nil
@@ -35,20 +35,17 @@ struct HomeView: View {
                 
                 // Main Page Profile Card
                 HStack {
-                    AsyncImage(url: profileImageURL) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView().frame(width: 100, height: 100)
-                        case .success(let image):
-                            image.resizable().scaledToFill().frame(width: 100, height: 100).clipShape(Circle())
-                        case .failure:
-                            Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .foregroundStyle(.gray)
-                                .frame(width: 100, height: 100)
-                        @unknown default:
-                            EmptyView()
-                        }
+                    if let data = profileImageData, let uiImage = UIImage(data: data) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 100, height: 100)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .foregroundStyle(.gray)
+                            .frame(width: 100, height: 100)
                     }
                     
                     Text("Hi, " + person.name)
@@ -123,13 +120,7 @@ struct HomeView: View {
         }
         .task {
             guard !person.isTestUser else { return }
-
-            do {
-                self.profileImageURL = try getProfileImageURL(for: person.id)
-            } catch {
-                print("Failed to load image URL: \(error)")
-            }
-            
+            self.profileImageData = await getCachedProfileImageData(for: person.id)
             await loadAISummary(forceRefresh: false)
         }
     }

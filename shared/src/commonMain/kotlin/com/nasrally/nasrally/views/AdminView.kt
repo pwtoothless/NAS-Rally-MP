@@ -88,6 +88,7 @@ import com.nasrally.nasrally.SignedWaiverRow
 import com.nasrally.nasrally.Waiver
 import com.nasrally.nasrally.WaiverInsertRow
 import com.nasrally.nasrally.fetchUserIDImageData
+import com.nasrally.nasrally.getCachedUserIDImageData
 import com.nasrally.nasrally.getProfileImageURL
 import com.nasrally.nasrally.getRallyImageURL
 import com.nasrally.nasrally.supabase
@@ -1410,14 +1411,8 @@ private fun ApprovalAdminDialog(
 
 @Composable
 private fun UserAvatar(userId: String, userName: String, modifier: Modifier = Modifier) {
-    var avatarUrl by remember(userId) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(userId) {
-        avatarUrl = getProfileImageURL(userId)
-    }
-
-    AsyncImage(
-        url = avatarUrl,
+    CachedProfileImage(
+        userId = userId,
         contentDescription = userName,
         modifier = modifier,
         error = {
@@ -1437,12 +1432,10 @@ fun UserProfileDetailDialog(
 ) {
     var idImageData by remember { mutableStateOf<ByteArray?>(null) }
     var isLoadingID by remember { mutableStateOf(true) }
-    var profileImageUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(user.id) {
         isLoadingID = true
-        profileImageUrl = getProfileImageURL(user.id)
-        idImageData = fetchUserIDImageData(user.id)
+        idImageData = getCachedUserIDImageData(user.id, isAdmin = true)
         isLoadingID = false
     }
 
@@ -1460,8 +1453,8 @@ fun UserProfileDetailDialog(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AsyncImage(
-                    url = profileImageUrl,
+                CachedProfileImage(
+                    userId = user.id,
                     contentDescription = user.name,
                     modifier = Modifier
                         .size(90.dp)

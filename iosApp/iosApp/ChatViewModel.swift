@@ -13,6 +13,7 @@ class ChatViewModel: ObservableObject {
     private var currentPage = 0
     private var canLoadMore = true
     private var channel: RealtimeChannelV2?
+    private var cacheKey: String { "chat_messages_\(groupId.uuidString)" }
     
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -20,14 +21,35 @@ class ChatViewModel: ObservableObject {
         return decoder
     }()
     
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+    
     init(client: SupabaseClient, groupId: UUID) {
         self.client = client
         self.groupId = groupId
+        loadCachedMessages()
         setupRealtimeSubscription()
         Task {
             for await status in client.realtimeV2.statusChange {
                 print("Realtime Status: \(status)")
             }
+        }
+    }
+    
+    private func loadCachedMessages() {
+        if let data = UserDefaults.standard.data(forKey: cacheKey),
+           let cached = try? decoder.decode([Message].self, from: data), !cached.isEmpty {
+            self.messages = Array(cached.prefix(50))
+        }
+    }
+    
+    private func saveCachedMessages() {
+        let top50 = Array(self.messages.prefix(50))
+        if let data = try? encoder.encode(top50) {
+            UserDefaults.standard.set(data, forKey: cacheKey)
         }
     }
     
@@ -49,6 +71,7 @@ class ChatViewModel: ObservableObject {
                     await MainActor.run {
                         if !self.messages.contains(where: { $0.id == newMessage.id }) {
                             self.messages.insert(newMessage, at: 0)
+                            self.saveCachedMessages()
                         }
                     }
                 } catch { print("Realtime decode error: \(error)") }
@@ -79,8 +102,14 @@ class ChatViewModel: ObservableObject {
             if fetchedMessages.count < pageSize { canLoadMore = false }
             
             await MainActor.run {
-                if isRefresh { self.messages = fetchedMessages } 
-                else { self.messages.append(contentsOf: fetchedMessages) }
+                if isRefresh {
+                    self.messages = fetchedMessages
+                } else {
+                    let existingIds = Set(self.messages.map { $0.id })
+                    let newUnique = fetchedMessages.filter { !existingIds.contains($0.id) }
+                    self.messages.append(contentsOf: newUnique)
+                }
+                self.saveCachedMessages()
                 currentPage += 1
             }
         } catch { print("Fetch error: \(error)") }
@@ -99,6 +128,7 @@ class ChatViewModel: ObservableObject {
         // Add locally immediately so UI doesn't look broken
         await MainActor.run {
             self.messages.insert(newMessage, at: 0)
+            self.saveCachedMessages()
         }
         
         do {
@@ -110,6 +140,7 @@ class ChatViewModel: ObservableObject {
             // Remove locally if it fails
             await MainActor.run {
                 self.messages.removeAll(where: { $0.id == newMessage.id })
+                self.saveCachedMessages()
             }
         }
     }
