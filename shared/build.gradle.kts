@@ -41,7 +41,7 @@ kotlin {
     }
     
     android {
-       namespace = "com.nasrally.nasrally.shared"
+       namespace = "com.nasrally.nasrally"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     
