@@ -275,6 +275,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InternalImportsByDefault";
 				PRODUCT_BUNDLE_IDENTIFIER = com.nasrally.nasrally;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -282,7 +283,6 @@
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InternalImportsByDefault";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -440,6 +440,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InternalImportsByDefault";
 				PRODUCT_BUNDLE_IDENTIFIER = com.nasrally.nasrally;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -447,7 +448,6 @@
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InternalImportsByDefault";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;

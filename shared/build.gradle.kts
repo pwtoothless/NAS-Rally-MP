@@ -41,7 +41,7 @@ kotlin {
     }
     
     android {
-       namespace = "com.nasrally.nasrally"
+       namespace = "com.nasrally.nasrally.shared"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     
@@ -67,6 +67,8 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
             implementation(libs.ktor.client.cio)
+            implementation(project.dependencies.platform(libs.firebase.bom))
+            implementation(libs.firebase.messaging)
         }
         commonMain.dependencies {
             implementation(project.dependencies.platform(libs.supabase.bom))

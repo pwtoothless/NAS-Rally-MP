@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nasrally.nasrally.ActiveChatTracker
 import com.nasrally.nasrally.ChatViewModel
 import com.nasrally.nasrally.GroupRow
 import com.nasrally.nasrally.Message
@@ -193,6 +195,13 @@ fun MessageThreadView(
     LaunchedEffect(messages.firstOrNull()?.id, messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(0)
+        }
+    }
+
+    DisposableEffect(groupName) {
+        ActiveChatTracker.setActiveGroup(viewModel.groupId)
+        onDispose {
+            ActiveChatTracker.setActiveGroup(null)
         }
     }
 
