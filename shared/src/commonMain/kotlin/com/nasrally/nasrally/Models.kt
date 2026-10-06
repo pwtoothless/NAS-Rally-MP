@@ -234,6 +234,26 @@ data class RallyRequestInsert(
     @SerialName("rally_id") val rallyId: String
 )
 
+@Serializable
+data class ReadReceipt(
+    @SerialName("message_id") val messageId: String,
+    @SerialName("user_id") val userId: String,
+    @SerialName("read_at") val readAt: String
+)
+
+@Serializable
+data class ReadReceiptInsert(
+    @SerialName("message_id") val messageId: String,
+    @SerialName("user_id") val userId: String,
+    @SerialName("read_at") val readAt: String
+)
+
+@Serializable
+data class GroupMemberRow(
+    @SerialName("group_id") val groupId: String,
+    @SerialName("user_id") val userId: String
+)
+
 sealed class AuthResult {
     data class Success(val person: PersonInfo) : AuthResult()
     data class Failure(val message: String) : AuthResult()

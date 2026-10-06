@@ -64,6 +64,8 @@ struct MessageThreadView: View {
     @StateObject var viewModel: ChatViewModel
     @State private var messageInput: String = ""
     @FocusState private var isInputFocused: Bool
+    @State private var selectedProfile: PersonInfo? = nil
+    @State private var selectedMessageForReceipts: Message? = nil
     let groupName: String
     
     init(person: Binding<PersonInfo>, viewModel: ChatViewModel, groupName: String) {
@@ -77,10 +79,33 @@ struct MessageThreadView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(viewModel.messages.reversed()) { message in
+                        let senderProfile = viewModel.profilesMap[message.senderId]
+                        let receipts = viewModel.readReceipts[message.id] ?? []
+                        let totalMembers = viewModel.groupMembers.count
+                        
                         MessageBubble(
                             message: message,
                             isCurrentUser: message.senderId == person.id,
-                            themeColor: person.themeColor
+                            senderProfile: senderProfile,
+                            receipts: receipts,
+                            totalMembers: totalMembers,
+                            themeColor: person.themeColor,
+                            onAvatarTap: {
+                                selectedProfile = senderProfile ?? PersonInfo(
+                                    id: message.senderId,
+                                    name: "User",
+                                    theme: "Auto",
+                                    bio: "",
+                                    privligeLevel: "User",
+                                    tos: true,
+                                    instaHandle: "",
+                                    carModel: "",
+                                    phoneNumber: ""
+                                )
+                            },
+                            onReceiptTap: {
+                                selectedMessageForReceipts = message
+                            }
                         )
                         .id(message.id)
                     }
@@ -96,7 +121,7 @@ struct MessageThreadView: View {
             .scrollDismissesKeyboard(.interactively)
             .defaultScrollAnchor(.bottom)
             .refreshable {
-                await viewModel.loadMessages(isRefresh: false)
+                await viewModel.loadMessages(isRefresh: false, currentUserId: person.id)
             }
             .safeAreaInset(edge: .top) {
                 messagesHeaderView
@@ -105,6 +130,9 @@ struct MessageThreadView: View {
                 inputBarView
             }
             .onChange(of: viewModel.messages.count) {
+                Task {
+                    await viewModel.markMessagesAsRead(currentUserId: person.id)
+                }
                 withAnimation(.easeOut(duration: 0.25)) {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 }
@@ -123,8 +151,22 @@ struct MessageThreadView: View {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
-        .task { await viewModel.loadMessages(isRefresh: true) }
+        .task {
+            await viewModel.loadMessages(isRefresh: true, currentUserId: person.id)
+        }
         .toolbar(.hidden, for: .navigationBar)
+        .sheet(item: $selectedProfile) { user in
+            UserProfileDetailSheet(user: user.toAdminProfile)
+        }
+        .sheet(item: $selectedMessageForReceipts) { msg in
+            ReadReceiptsSheet(
+                message: msg,
+                viewModel: viewModel,
+                onSelectUser: { p in
+                    selectedProfile = p
+                }
+            )
+        }
     }
     
     // MARK: - Glass Top Header View
@@ -223,13 +265,46 @@ struct MessageThreadView: View {
 struct MessageBubble: View {
     let message: Message
     let isCurrentUser: Bool
+    let senderProfile: PersonInfo?
+    let receipts: [ReadReceipt]
+    let totalMembers: Int
     var themeColor: Color = .blue
+    let onAvatarTap: () -> Void
+    let onReceiptTap: () -> Void
+    
+    var firstName: String {
+        let name = senderProfile?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if name.isEmpty { return "User" }
+        return String(name.split(separator: " ").first ?? "User")
+    }
+    
+    var readCount: Int {
+        Set(receipts.map { $0.userId }).count
+    }
     
     var body: some View {
-        HStack {
-            if isCurrentUser { Spacer(minLength: 40) }
+        HStack(alignment: .bottom, spacing: 6) {
+            if isCurrentUser {
+                Spacer(minLength: 30)
+            } else {
+                // Profile Picture & First Name underneath ONLY for other users
+                Button(action: onAvatarTap) {
+                    VStack(spacing: 2) {
+                        CachedProfileImageView(userID: message.senderId)
+                            .frame(width: 28, height: 28)
+                            .clipShape(Circle())
+                        
+                        Text(firstName)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
             
-            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
+            // Content bubble & Read Receipt indicator
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
                 Text(message.content)
                     .font(.body)
                     .padding(.horizontal, 14)
@@ -237,16 +312,142 @@ struct MessageBubble: View {
                     .background(isCurrentUser ? themeColor : Color(uiColor: .secondarySystemBackground))
                     .foregroundColor(isCurrentUser ? .white : .primary)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .foregroundColor(isCurrentUser ? .white : .primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 
-                Text(message.createdAt.formatted(date: .omitted, time: .shortened))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 6)
+                HStack(spacing: 6) {
+                    Text(message.createdAt.formatted(date: .omitted, time: .shortened))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    Button(action: onReceiptTap) {
+                        Text("\(readCount)/\(max(totalMembers, 1))")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(themeColor.opacity(0.15))
+                            .foregroundColor(themeColor)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 4)
             }
             
-            if !isCurrentUser { Spacer(minLength: 40) }
+            if !isCurrentUser {
+                Spacer(minLength: 30)
+            }
+        }
+    }
+}
+
+struct ReadReceiptsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let message: Message
+    @ObservedObject var viewModel: ChatViewModel
+    let onSelectUser: (PersonInfo) -> Void
+    
+    var readReceipts: [ReadReceipt] {
+        viewModel.readReceipts[message.id] ?? []
+    }
+    
+    var readUserIds: Set<UUID> {
+        Set(readReceipts.map { $0.userId })
+    }
+    
+    var readMap: [UUID: ReadReceipt] {
+        Dictionary(uniqueKeysWithValues: readReceipts.map { ($0.userId, $0) })
+    }
+    
+    var readMembers: [PersonInfo] {
+        viewModel.groupMembers.filter { readUserIds.contains($0.id) }
+    }
+    
+    var unreadMembers: [PersonInfo] {
+        viewModel.groupMembers.filter { !readUserIds.contains($0.id) }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text("Read Progress")) {
+                    HStack {
+                        Text("Status")
+                        Spacer()
+                        Text("\(readMembers.count) of \(viewModel.groupMembers.count) read")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                if !readMembers.isEmpty {
+                    Section(header: Text("Read By (\(readMembers.count))")) {
+                        ForEach(readMembers, id: \.id) { member in
+                            Button(action: {
+                                dismiss()
+                                onSelectUser(member)
+                            }) {
+                                HStack(spacing: 12) {
+                                    CachedProfileImageView(userID: member.id)
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(member.name)
+                                            .font(.body)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+                                        
+                                        if let receipt = readMap[member.id] {
+                                            Text(receipt.readAt.formatted(date: .numeric, time: .shortened))
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if !unreadMembers.isEmpty {
+                    Section(header: Text("Unread (\(unreadMembers.count))")) {
+                        ForEach(unreadMembers, id: \.id) { member in
+                            Button(action: {
+                                dismiss()
+                                onSelectUser(member)
+                            }) {
+                                HStack(spacing: 12) {
+                                    CachedProfileImageView(userID: member.id)
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                    
+                                    Text(member.name)
+                                        .font(.body)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                    
+                                    Text("Unread")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Read Status")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

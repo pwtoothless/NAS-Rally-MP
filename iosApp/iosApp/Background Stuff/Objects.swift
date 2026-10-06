@@ -41,7 +41,7 @@ extension PersonInfo {
     }
 }
 
-struct PersonInfo {
+struct PersonInfo: Identifiable {
     var id: UUID
     var name: String
     var theme: String
@@ -53,6 +53,20 @@ struct PersonInfo {
     var instaHandle: String
     var carModel: String
     var phoneNumber: String
+
+    var toAdminProfile: AdminProfile {
+        AdminProfile(
+            id: id,
+            name: name,
+            bio: bio,
+            privligeLevel: privligeLevel,
+            theme: theme,
+            tos: tos,
+            instaHandle: instaHandle,
+            carModel: carModel,
+            phoneNumber: phoneNumber
+        )
+    }
 }
 
 extension PersonInfo {
@@ -116,7 +130,8 @@ struct Message: Codable, Identifiable, Equatable {
     }
 }
 
-struct ReadReceipt: Codable {
+struct ReadReceipt: Codable, Identifiable, Equatable {
+    var id: String { "\(messageId.uuidString)_\(userId.uuidString)" }
     let messageId: UUID
     let userId: UUID
     let readAt: Date
@@ -125,6 +140,16 @@ struct ReadReceipt: Codable {
         case messageId = "message_id"
         case userId = "user_id"
         case readAt = "read_at"
+    }
+}
+
+struct GroupMemberRow: Codable {
+    let groupId: UUID
+    let userId: UUID
+    
+    enum CodingKeys: String, CodingKey {
+        case groupId = "group_id"
+        case userId = "user_id"
     }
 }
 

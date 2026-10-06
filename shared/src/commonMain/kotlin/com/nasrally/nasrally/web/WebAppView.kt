@@ -81,6 +81,7 @@ import com.nasrally.nasrally.AuthResult
 import com.nasrally.nasrally.ChatViewModel
 import com.nasrally.nasrally.DatabaseRally
 import com.nasrally.nasrally.GroupRow
+import com.nasrally.nasrally.Message
 import com.nasrally.nasrally.PersonInfo
 import com.nasrally.nasrally.RallyParticipantRow
 import com.nasrally.nasrally.RallyRequestInsert
@@ -101,6 +102,8 @@ import com.nasrally.nasrally.views.AdminView
 import com.nasrally.nasrally.views.AsyncImage
 import com.nasrally.nasrally.views.IDView
 import com.nasrally.nasrally.views.MessageBubble
+import com.nasrally.nasrally.views.ReadReceiptsDialog
+import com.nasrally.nasrally.views.UserProfileSheetDialog
 import com.nasrally.nasrally.views.ProfileView
 import com.nasrally.nasrally.views.RallyUserDetailDialog
 import com.nasrally.nasrally.views.WaiverDetailDialog
@@ -1533,11 +1536,23 @@ fun WebChatView(personInfo: PersonInfo) {
                     val scope = rememberCoroutineScope()
                     val viewModel = remember(group.id) { ChatViewModel(group.id, scope) }
                     val messages by viewModel.messages.collectAsState()
+                    val groupMembers by viewModel.groupMembers.collectAsState()
+                    val profilesMap by viewModel.profilesMap.collectAsState()
+                    val readReceipts by viewModel.readReceipts.collectAsState()
+
                     var messageInput by remember { mutableStateOf("") }
+                    var selectedProfileForSheet by remember { mutableStateOf<PersonInfo?>(null) }
+                    var selectedMessageForReceipts by remember { mutableStateOf<Message?>(null) }
                     val listState = rememberLazyListState()
 
                     LaunchedEffect(group.id) {
-                        viewModel.loadMessages(isRefresh = true)
+                        viewModel.loadMessages(isRefresh = true, currentUserId = personInfo.id)
+                    }
+
+                    LaunchedEffect(messages.size) {
+                        if (messages.isNotEmpty()) {
+                            viewModel.markMessagesAsRead(personInfo.id)
+                        }
                     }
 
                     LaunchedEffect(messages.firstOrNull()?.id, messages.size) {
@@ -1599,9 +1614,22 @@ fun WebChatView(personInfo: PersonInfo) {
                             .padding(16.dp)
                     ) {
                         items(messages, key = { it.id }) { message ->
+                            val senderProfile = profilesMap[message.senderId]
+                            val msgReceipts = readReceipts[message.id] ?: emptyList()
+                            val totalMembers = groupMembers.size.coerceAtLeast(1)
+
                             MessageBubble(
                                 message = message,
-                                isCurrentUser = message.senderId == personInfo.id
+                                isCurrentUser = message.senderId == personInfo.id,
+                                senderProfile = senderProfile,
+                                msgReceipts = msgReceipts,
+                                totalMembers = totalMembers,
+                                onAvatarClick = { profile ->
+                                    selectedProfileForSheet = profile
+                                },
+                                onReceiptClick = {
+                                    selectedMessageForReceipts = message
+                                }
                             )
                         }
                     }
@@ -1655,6 +1683,29 @@ fun WebChatView(personInfo: PersonInfo) {
                                 tint = if (messageInput.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
                             )
                         }
+                    }
+
+                    // Selected Profile Dialog Sheet
+                    selectedProfileForSheet?.let { profile ->
+                        UserProfileSheetDialog(
+                            user = profile,
+                            onDismiss = { selectedProfileForSheet = null }
+                        )
+                    }
+
+                    // Read Receipts Dialog Sheet
+                    selectedMessageForReceipts?.let { message ->
+                        val receipts = readReceipts[message.id] ?: emptyList()
+                        ReadReceiptsDialog(
+                            message = message,
+                            readReceipts = receipts,
+                            groupMembers = groupMembers,
+                            profilesMap = profilesMap,
+                            onDismiss = { selectedMessageForReceipts = null },
+                            onSelectUser = { user ->
+                                selectedProfileForSheet = user
+                            }
+                        )
                     }
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
