@@ -1,6 +1,23 @@
 import Foundation
 import SwiftUI
 
+final class MemoryImageCache: @unchecked Sendable {
+    static let shared = MemoryImageCache()
+    private let cache = NSCache<NSString, UIImage>()
+
+    func image(forKey key: String) -> UIImage? {
+        return cache.object(forKey: key as NSString)
+    }
+
+    func setImage(_ image: UIImage, forKey key: String) {
+        cache.setObject(image, forKey: key as NSString)
+    }
+
+    func removeImage(forKey key: String) {
+        cache.removeObject(forKey: key as NSString)
+    }
+}
+
 final class CacheManager: Sendable {
     static let shared = CacheManager()
     private let fileManager = FileManager.default
@@ -66,12 +83,12 @@ final class CacheManager: Sendable {
 
 struct CachedRallyLogoView: View {
     let name: String
-    @State private var logoData: Data? = nil
+    @State private var uiImage: UIImage? = nil
 
     var body: some View {
         Group {
-            if let data = logoData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
+            if let image = uiImage {
+                Image(uiImage: image)
                     .resizable()
             } else {
                 Image(systemName: "car.fill")
@@ -80,20 +97,37 @@ struct CachedRallyLogoView: View {
                     .opacity(0.3)
             }
         }
+        .onAppear {
+            let sanitized = name.replacingOccurrences(of: "[^a-zA-Z0-9_-]", with: "_", options: .regularExpression)
+            let key = "rally_logo_\(sanitized)"
+            if let cached = MemoryImageCache.shared.image(forKey: key) {
+                self.uiImage = cached
+            }
+        }
         .task(id: name) {
-            self.logoData = await getCachedRallyLogoData(for: name)
+            let sanitized = name.replacingOccurrences(of: "[^a-zA-Z0-9_-]", with: "_", options: .regularExpression)
+            let key = "rally_logo_\(sanitized)"
+            if MemoryImageCache.shared.image(forKey: key) == nil {
+                if let data = await getCachedRallyLogoData(for: name),
+                   let img = UIImage(data: data) {
+                    MemoryImageCache.shared.setImage(img, forKey: key)
+                    await MainActor.run {
+                        self.uiImage = img
+                    }
+                }
+            }
         }
     }
 }
 
 struct CachedProfileImageView: View {
     let userID: UUID
-    @State private var imageData: Data? = nil
+    @State private var uiImage: UIImage? = nil
 
     var body: some View {
         Group {
-            if let data = imageData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
+            if let image = uiImage {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
             } else {
@@ -102,8 +136,23 @@ struct CachedProfileImageView: View {
                     .foregroundStyle(.gray)
             }
         }
+        .onAppear {
+            let key = "profile_\(userID.uuidString)"
+            if let cached = MemoryImageCache.shared.image(forKey: key) {
+                self.uiImage = cached
+            }
+        }
         .task(id: userID) {
-            self.imageData = await getCachedProfileImageData(for: userID)
+            let key = "profile_\(userID.uuidString)"
+            if MemoryImageCache.shared.image(forKey: key) == nil {
+                if let data = await getCachedProfileImageData(for: userID),
+                   let img = UIImage(data: data) {
+                    MemoryImageCache.shared.setImage(img, forKey: key)
+                    await MainActor.run {
+                        self.uiImage = img
+                    }
+                }
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.nasrally.nasrally
 
+import androidx.compose.ui.graphics.ImageBitmap
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -323,6 +324,79 @@ suspend fun getCachedRallyLogoData(name: String): ByteArray? {
     }
 }
 
+object ProfileImageMemoryCache {
+    private val cache = mutableMapOf<String, ImageBitmap>()
+
+    fun get(userId: String): ImageBitmap? {
+        if (userId.isBlank()) return null
+        return cache[userId]
+    }
+
+    fun put(userId: String, bitmap: ImageBitmap) {
+        if (userId.isNotBlank()) {
+            cache[userId] = bitmap
+        }
+    }
+
+    fun remove(userId: String) {
+        cache.remove(userId)
+    }
+}
+
+object RallyLogoMemoryCache {
+    private val cache = mutableMapOf<String, ImageBitmap>()
+
+    fun get(name: String): ImageBitmap? {
+        if (name.isBlank()) return null
+        return cache[name]
+    }
+
+    fun put(name: String, bitmap: ImageBitmap) {
+        if (name.isNotBlank()) {
+            cache[name] = bitmap
+        }
+    }
+}
+
+suspend fun getCachedProfileImageBitmap(userId: String): ImageBitmap? {
+    if (userId.isBlank()) return null
+    ProfileImageMemoryCache.get(userId)?.let { return it }
+
+    val key = "profile_$userId.jpg"
+    val cached = LocalDiskCache.getBytes(key)
+    if (cached != null && cached.isNotEmpty()) {
+        try {
+            val bitmap = cached.decodeToImageBitmap()
+            ProfileImageMemoryCache.put(userId, bitmap)
+            return bitmap
+        } catch (_: Exception) {
+            LocalDiskCache.remove(key)
+        }
+    }
+
+    val url = getProfileImageURL(userId) ?: return null
+    return try {
+        val response = imageHttpClient.get(url)
+        if (response.status.value in 200..299) {
+            val bytes = response.bodyAsBytes()
+            if (bytes.isNotEmpty()) {
+                try {
+                    val bitmap = bytes.decodeToImageBitmap()
+                    LocalDiskCache.saveBytes(key, bytes)
+                    ProfileImageMemoryCache.put(userId, bitmap)
+                    return bitmap
+                } catch (_: Exception) {}
+            }
+        } else {
+            println("Profile image download returned HTTP ${response.status.value} for user $userId")
+        }
+        null
+    } catch (e: Exception) {
+        println("Error downloading profile image ($userId): ${e.message}")
+        null
+    }
+}
+
 suspend fun getCachedProfileImageData(userId: String): ByteArray? {
     if (userId.isBlank()) return null
     val key = "profile_$userId.jpg"
@@ -360,6 +434,7 @@ suspend fun getCachedProfileImageData(userId: String): ByteArray? {
 
 fun invalidateCachedProfileImage(userId: String) {
     if (userId.isNotBlank()) {
+        ProfileImageMemoryCache.remove(userId)
         LocalDiskCache.remove("profile_$userId.jpg")
     }
 }

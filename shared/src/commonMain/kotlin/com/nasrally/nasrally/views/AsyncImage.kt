@@ -12,7 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import com.nasrally.nasrally.getCachedProfileImageData
+import com.nasrally.nasrally.ProfileImageMemoryCache
+import com.nasrally.nasrally.RallyLogoMemoryCache
+import com.nasrally.nasrally.getCachedProfileImageBitmap
 import com.nasrally.nasrally.getCachedRallyLogoData
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -115,31 +117,38 @@ fun CachedRallyLogoImage(
     loading: @Composable () -> Unit = {},
     error: @Composable () -> Unit = {}
 ) {
-    var byteArray by remember(rallyName) { mutableStateOf<ByteArray?>(null) }
-    var isLoading by remember(rallyName) { mutableStateOf(true) }
+    if (rallyName.isNullOrBlank()) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) { error() }
+        return
+    }
+
+    var bitmap by remember(rallyName) { mutableStateOf(RallyLogoMemoryCache.get(rallyName)) }
 
     LaunchedEffect(rallyName) {
-        if (!rallyName.isNullOrBlank()) {
-            isLoading = true
-            byteArray = getCachedRallyLogoData(rallyName)
-            isLoading = false
-        } else {
-            byteArray = null
-            isLoading = false
+        if (bitmap == null) {
+            val bytes = getCachedRallyLogoData(rallyName)
+            if (bytes != null && bytes.isNotEmpty()) {
+                try {
+                    val decoded = bytes.decodeToImageBitmap()
+                    RallyLogoMemoryCache.put(rallyName, decoded)
+                    bitmap = decoded
+                } catch (_: Exception) {}
+            }
         }
     }
 
-    if (isLoading) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) { loading() }
-    } else {
-        AsyncImage(
-            byteArray = byteArray,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = contentScale,
-            loading = loading,
-            error = error
-        )
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        val b = bitmap
+        if (b != null) {
+            Image(
+                bitmap = b,
+                contentDescription = contentDescription,
+                modifier = Modifier.matchParentSize(),
+                contentScale = contentScale
+            )
+        } else {
+            error()
+        }
     }
 }
 
@@ -152,30 +161,30 @@ fun CachedProfileImage(
     loading: @Composable () -> Unit = {},
     error: @Composable () -> Unit = {}
 ) {
-    var byteArray by remember(userId) { mutableStateOf<ByteArray?>(null) }
-    var isLoading by remember(userId) { mutableStateOf(true) }
+    if (userId.isNullOrBlank()) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) { error() }
+        return
+    }
+
+    var bitmap by remember(userId) { mutableStateOf(ProfileImageMemoryCache.get(userId)) }
 
     LaunchedEffect(userId) {
-        if (!userId.isNullOrBlank()) {
-            isLoading = true
-            byteArray = getCachedProfileImageData(userId)
-            isLoading = false
-        } else {
-            byteArray = null
-            isLoading = false
+        if (bitmap == null) {
+            bitmap = getCachedProfileImageBitmap(userId)
         }
     }
 
-    if (isLoading) {
-        Box(modifier = modifier, contentAlignment = Alignment.Center) { loading() }
-    } else {
-        AsyncImage(
-            byteArray = byteArray,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = contentScale,
-            loading = loading,
-            error = error
-        )
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        val b = bitmap
+        if (b != null) {
+            Image(
+                bitmap = b,
+                contentDescription = contentDescription,
+                modifier = Modifier.matchParentSize(),
+                contentScale = contentScale
+            )
+        } else {
+            error()
+        }
     }
 }

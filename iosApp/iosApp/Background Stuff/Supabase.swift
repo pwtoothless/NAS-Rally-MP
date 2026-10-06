@@ -347,6 +347,7 @@ func getCachedProfileImageData(for userID: UUID) async -> Data? {
 }
 
 func invalidateCachedProfileImage(for userID: UUID) {
+    MemoryImageCache.shared.removeImage(forKey: "profile_\(userID.uuidString)")
     CacheManager.shared.removeData(forKey: "profile_\(userID.uuidString).jpg")
 }
 
