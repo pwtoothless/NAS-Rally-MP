@@ -25,15 +25,16 @@ struct ChatView: View {
                 )) {
                     HStack(spacing: 12) {
                         CachedRallyLogoView(name: rally.name)
-                            .scaledToFill()
-                            .frame(width: 48, height: 48)
+                            .scaledToFit()
+                            .frame(width: 65, height: 65)
                             .clipShape(Circle())
+                            .clipped()
                         
                         Text(rally.name)
                             .font(.body)
                             .fontWeight(.medium)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 3)
                 }
             }
             .navigationTitle("Messages")

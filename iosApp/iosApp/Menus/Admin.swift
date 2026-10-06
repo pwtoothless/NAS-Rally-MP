@@ -544,11 +544,12 @@ struct RallyDetailSheet: View {
                 VStack(spacing: 0) {
                     VStack(spacing: 12) {
                         CachedRallyLogoView(name: rally.name)
-                            .scaledToFill()
+                            .scaledToFit()
                             .frame(width: 80, height: 80)
                             .clipShape(Circle())
                             .overlay(Circle().stroke(Color.white, lineWidth: 2))
                             .shadow(radius: 4)
+                            .clipped()
                         
                         Text(rally.name)
                             .font(.title2)
