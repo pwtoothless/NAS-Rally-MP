@@ -53,9 +53,8 @@ struct HomeView: View {
                         .font(.headline)
                 }
                 .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: 330, alignment: .center)
                 .frame(height: 150)
-                .padding(.leading, 15)
                 .glassEffectCompat(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .padding(.horizontal, 16)
                 
