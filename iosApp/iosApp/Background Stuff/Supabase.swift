@@ -131,6 +131,22 @@ func updateTheme(personID: UUID, theme: String) async {
     }
 }
 
+struct SupabaseTOSUpdateRow: Encodable {
+    let tos: Bool
+}
+
+func updateTOS(personID: UUID, tos: Bool) async {
+    guard personID != PersonInfo.testUserID else { return }
+    do {
+        try await supabase.from("profiles")
+            .update(SupabaseTOSUpdateRow(tos: tos))
+            .eq("id", value: personID.uuidString)
+            .execute()
+    } catch {
+        print("Error updating TOS: \(error)")
+    }
+}
+
 enum AuthResult {
     case success(PersonInfo)
     case failure(String)

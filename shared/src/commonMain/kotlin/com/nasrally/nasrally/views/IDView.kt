@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -113,9 +114,14 @@ fun IDCardPreview(imageBytes: ByteArray?) {
 }
 
 @Composable
-fun IDView(person: PersonInfo) {
+fun IDView(
+    person: PersonInfo,
+    isOnboarding: Boolean = false,
+    onComplete: (() -> Unit)? = null
+) {
     var selectedImageBytes by remember { mutableStateOf<ByteArray?>(null) }
     var isUploading by remember { mutableStateOf(false) }
+    var uploadSucceeded by remember { mutableStateOf(false) }
     var toastMessage by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var showToast by remember { mutableStateOf(false) }
@@ -136,15 +142,23 @@ fun IDView(person: PersonInfo) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            Text(
-                text = "Verify ID",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                textAlign = TextAlign.Start
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Verify ID",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+                if (isOnboarding) {
+                    TextButton(onClick = { onComplete?.invoke() }) {
+                        Text("Skip for Now", color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
 
             Text(
                 text = "Please capture or select a clear photo of the front of your driver's license or government-issued ID for registration.",
@@ -189,54 +203,77 @@ fun IDView(person: PersonInfo) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(
-                onClick = {
-                    val bytes = selectedImageBytes ?: return@Button
-                    isUploading = true
-                    scope.launch {
-                        try {
-                            val path = "${person.id.uppercase()}/userid.png"
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        val bytes = selectedImageBytes ?: return@Button
+                        isUploading = true
+                        uploadSucceeded = false
+                        scope.launch {
                             try {
-                                supabase.storage.from("User-IDs").delete(listOf(path))
-                            } catch (_: Exception) {
-                                // Ignore if file didn't exist
-                            }
-                            try {
-                                supabase.storage.from("User-IDs").upload(path, bytes) {
-                                    upsert = true
+                                val path = "${person.id.uppercase()}/userid.png"
+                                try {
+                                    supabase.storage.from("User-IDs").delete(listOf(path))
+                                } catch (_: Exception) {
+                                    // Ignore if file didn't exist
                                 }
-                            } catch (_: Exception) {
-                                supabase.storage.from("User-IDs").update(path, bytes)
+                                try {
+                                    supabase.storage.from("User-IDs").upload(path, bytes) {
+                                        upsert = true
+                                    }
+                                } catch (_: Exception) {
+                                    supabase.storage.from("User-IDs").update(path, bytes)
+                                }
+                                toastMessage = "ID uploaded successfully!"
+                                isError = false
+                                uploadSucceeded = true
+                                showToast = true
+                                if (isOnboarding) {
+                                    delay(1500)
+                                    showToast = false
+                                    onComplete?.invoke()
+                                }
+                            } catch (e: Exception) {
+                                println("Upload ID error: ${e.message}")
+                                toastMessage = e.message ?: "Upload failed"
+                                isError = true
+                                uploadSucceeded = false
+                                showToast = true
+                            } finally {
+                                isUploading = false
+                                if (!isOnboarding) {
+                                    delay(2000)
+                                    showToast = false
+                                }
                             }
-                            toastMessage = "ID uploaded successfully!"
-                            isError = false
-                            showToast = true
-                        } catch (e: Exception) {
-                            println("Upload ID error: ${e.message}")
-                            toastMessage = e.message ?: "Upload failed"
-                            isError = true
-                            showToast = true
-                        } finally {
-                            isUploading = false
-                            delay(2000)
-                            showToast = false
                         }
+                    },
+                    enabled = selectedImageBytes != null && !isUploading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    if (isUploading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Uploading...")
+                    } else {
+                        Text("Save ID Document", fontWeight = FontWeight.Bold)
                     }
-                },
-                enabled = selectedImageBytes != null && !isUploading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                if (isUploading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Uploading...")
-                } else {
-                    Text("Save ID Document", fontWeight = FontWeight.Bold)
+                }
+
+                if (isOnboarding && uploadSucceeded) {
+                    Button(
+                        onClick = { onComplete?.invoke() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text("Continue to App", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

@@ -11,65 +11,67 @@ struct SettingsView: View {
     let themes = ["Auto", "Blue", "Red"]
     
     var body: some View {
-        VStack {
-            HStack {
-                Text("Settings")
-                    .font(.title2)
-                    .bold()
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 6)
-            
-            List {
-                NavigationLink(destination: ProfileView(person: $person)) {
-                    HStack {
-                        Image(systemName: "person.crop.circle.fill")
-                            .padding(.leading, 10)
-                        Text("Profile")
-                            .padding(.leading, 8)
-                    }
-                }
-                
+        NavigationStack {
+            VStack {
                 HStack {
-                    Image(systemName: "photo.artframe")
-                        .padding(.leading, 10)
+                    Text("Settings")
+                        .font(.title2)
+                        .bold()
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 6)
+                
+                List {
+                    NavigationLink(destination: ProfileView(person: $person)) {
+                        HStack {
+                            Image(systemName: "person.crop.circle.fill")
+                                .padding(.leading, 10)
+                            Text("Profile")
+                                .padding(.leading, 8)
+                        }
+                    }
                     
-                    Picker("Select a Theme", selection: $person.theme) {
-                        ForEach(themes, id: \.self) { themeName in
-                            Text(themeName)
-                        }
-                    }
-                    .padding(.leading, 8)
-                    .pickerStyle(.menu)
-                    .onChange(of: person.theme) { newTheme in
-                        Task {
-                            await updateTheme(personID: person.id, theme: newTheme)
-                        }
-                    }
-                }
-                
-                NavigationLink(destination: IDView(person: $person)) {
                     HStack {
-                        Image(systemName: "person.text.rectangle")
+                        Image(systemName: "photo.artframe")
                             .padding(.leading, 10)
-                        Text("ID")
-                            .padding(.leading, 8)
+                        
+                        Picker("Select a Theme", selection: $person.theme) {
+                            ForEach(themes, id: \.self) { themeName in
+                                Text(themeName)
+                            }
+                        }
+                        .padding(.leading, 8)
+                        .pickerStyle(.menu)
+                        .onChange(of: person.theme) { newTheme in
+                            Task {
+                                await updateTheme(personID: person.id, theme: newTheme)
+                            }
+                        }
+                    }
+                    
+                    NavigationLink(destination: IDView(person: $person)) {
+                        HStack {
+                            Image(systemName: "person.text.rectangle")
+                                .padding(.leading, 10)
+                            Text("ID")
+                                .padding(.leading, 8)
+                        }
+                    }
+                    
+                    HStack {
+                        Spacer()
+                        Button("Logout") {
+                            logout(person: person)
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.primary)
+                        Spacer()
                     }
                 }
-                
-                HStack {
-                    Spacer()
-                    Button("Logout") {
-                        logout(person: person)
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.primary)
-                    Spacer()
-                }
+                .glassEffectCompat(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             }
-            .glassEffectCompat(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
     }
 }

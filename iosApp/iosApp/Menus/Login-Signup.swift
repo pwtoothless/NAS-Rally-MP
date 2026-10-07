@@ -86,6 +86,14 @@ struct LoginView: View {
     }
 }
 
+enum OnboardingStep {
+    case signup
+    case tos
+    case onboarding
+    case idPrompt
+    case idUpload
+}
+
 struct SignupView: View {
     @Binding var person: PersonInfo
     @State private var NameInput = ""
@@ -95,9 +103,63 @@ struct SignupView: View {
     @State private var showPasswordMismatch = false
     @State private var signupErrorMessage = ""
     @State private var isSigningUp = false
+    @State private var signupStep: OnboardingStep = .signup
+    @State private var currentPerson: PersonInfo? = nil
     @State private var showContentView = false
     
+    private var personBinding: Binding<PersonInfo> {
+        Binding(
+            get: {
+                currentPerson ?? person
+            },
+            set: { updated in
+                currentPerson = updated
+            }
+        )
+    }
+
     var body: some View {
+        Group {
+            switch signupStep {
+            case .signup:
+                signupForm
+            case .tos:
+                TOSView(person: personBinding) {
+                    signupStep = .onboarding
+                }
+            case .onboarding:
+                OnboardingView(person: personBinding) {
+                    signupStep = .idPrompt
+                }
+            case .idPrompt:
+                IDPromptView(
+                    onProvideIDNow: {
+                        signupStep = .idUpload
+                    },
+                    onSkip: {
+                        finishOnboarding()
+                    }
+                )
+            case .idUpload:
+                IDView(person: personBinding, isOnboarding: true) {
+                    finishOnboarding()
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showContentView) {
+            ContentView(person: $person)
+                .navigationBarBackButtonHidden(true)
+        }
+    }
+
+    private func finishOnboarding() {
+        if let completed = currentPerson {
+            person = completed
+        }
+        showContentView = true
+    }
+
+    private var signupForm: some View {
         VStack {
             Text("Signup")
                 .font(.largeTitle)
@@ -140,8 +202,8 @@ struct SignupView: View {
                         
                         switch result {
                         case .success(let signedUpPerson):
-                            person = signedUpPerson
-                            showContentView = true
+                            currentPerson = signedUpPerson
+                            signupStep = .tos
                         case .failure(let message):
                             signupErrorMessage = message
                         }
@@ -158,10 +220,6 @@ struct SignupView: View {
             .disabled(isSigningUp)
             
             Spacer()
-        }
-        .navigationDestination(isPresented: $showContentView) {
-            ContentView(person: $person)
-                .navigationBarBackButtonHidden(true)
         }
     }
 }

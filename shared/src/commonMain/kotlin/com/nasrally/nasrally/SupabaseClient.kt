@@ -198,6 +198,25 @@ suspend fun updateTheme(userId: String, theme: String) {
     }
 }
 
+@Serializable
+data class SupabaseTOSUpdateRow(
+    val tos: Boolean
+)
+
+suspend fun updateTOS(userId: String, tos: Boolean) {
+    if (userId == PersonInfo.TEST_USER_ID) return
+    try {
+        supabase.from("profiles")
+            .update(SupabaseTOSUpdateRow(tos = tos)) {
+                filter {
+                    eq("id", userId)
+                }
+            }
+    } catch (e: Exception) {
+        println("Error updating TOS: ${e.message}")
+    }
+}
+
 suspend fun updateProfile(person: PersonInfo) {
     if (person.isTestUser) return
     val updateData = SupabaseProfileUpdateRow(

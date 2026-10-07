@@ -68,12 +68,15 @@ struct IDCardPreview: View {
 
 struct IDView: View {
     @Binding var person: PersonInfo
+    var isOnboarding: Bool = false
+    var onComplete: (() -> Void)? = nil
     
     @State private var selectedImage: UIImage? = nil
     @State private var showImagePicker = false
     @State private var pickerSourceType: UIImagePickerController.SourceType = .camera
     
     @State private var isUploading = false
+    @State private var uploadSucceeded = false
     @State private var showToast = false
     @State private var toastMessage = ""
     @State private var isError = false
@@ -87,6 +90,13 @@ struct IDView: View {
                             .font(.title2)
                             .bold()
                         Spacer()
+                        if isOnboarding {
+                            Button("Skip for Now") {
+                                onComplete?()
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        }
                     }
                     .padding(.horizontal)
                     .padding(.top, 16)
@@ -136,32 +146,49 @@ struct IDView: View {
                     
                     Spacer()
                     
-                    Button(action: {
-                        uploadAndSaveID()
-                    }) {
-                        HStack {
-                            if isUploading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .padding(.trailing, 8)
+                    VStack(spacing: 12) {
+                        Button(action: {
+                            uploadAndSaveID()
+                        }) {
+                            HStack {
+                                if isUploading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .padding(.trailing, 8)
+                                }
+                                Text(isUploading ? "Uploading..." : "Save ID Document")
+                                    .bold()
+                                    .foregroundColor(.white)
                             }
-                            Text(isUploading ? "Uploading..." : "Save ID Document")
-                                .bold()
-                                .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(selectedImage != nil ? Color.green : Color.green.opacity(0.5))
+                            .cornerRadius(12)
+                            .shadow(color: selectedImage != nil ? Color.green.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 4)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(selectedImage != nil ? Color.green : Color.green.opacity(0.5))
-                        .cornerRadius(12)
-                        .shadow(color: selectedImage != nil ? Color.green.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 4)
+                        .disabled(selectedImage == nil || isUploading)
+
+                        if isOnboarding && uploadSucceeded {
+                            Button(action: {
+                                onComplete?()
+                            }) {
+                                Text("Continue to App")
+                                    .bold()
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(person.themeColor)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                            }
+                        }
                     }
-                    .disabled(selectedImage == nil || isUploading)
                     .padding(.horizontal)
                     .padding(.bottom, 24)
                 }
             }
             .navigationTitle("Verify ID")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(isOnboarding)
             
             if showToast {
                 VStack {
@@ -198,6 +225,7 @@ struct IDView: View {
         
         isUploading = true
         isError = false
+        uploadSucceeded = false
         toastMessage = ""
         
         Task {
@@ -232,13 +260,21 @@ struct IDView: View {
                 
                 toastMessage = "ID uploaded successfully!"
                 isError = false
+                uploadSucceeded = true
                 showToast = true
                 
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                showToast = false
+                if isOnboarding {
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    showToast = false
+                    onComplete?()
+                } else {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    showToast = false
+                }
             } catch {
                 toastMessage = "Upload failed: \(error.localizedDescription)"
                 isError = true
+                uploadSucceeded = false
                 showToast = true
             }
             isUploading = false

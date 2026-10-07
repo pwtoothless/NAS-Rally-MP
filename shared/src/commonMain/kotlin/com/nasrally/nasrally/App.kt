@@ -30,6 +30,7 @@ import com.nasrally.nasrally.views.AdminView
 import com.nasrally.nasrally.views.AuthView
 import com.nasrally.nasrally.views.ChatView
 import com.nasrally.nasrally.views.HomeView
+import com.nasrally.nasrally.views.OnboardingFlowContainer
 import com.nasrally.nasrally.views.RalliesView
 import com.nasrally.nasrally.views.SettingsView
 import com.nasrally.nasrally.views.WaversView
@@ -72,11 +73,20 @@ fun App() {
                         CircularProgressIndicator()
                     }
                 } else if (personInfo != null) {
-                    ContentView(
-                        personInfo = personInfo!!,
-                        onUpdatePerson = { personInfo = it },
-                        onLogout = { personInfo = null }
-                    )
+                    if (!personInfo!!.tos) {
+                        OnboardingFlowContainer(
+                            person = personInfo!!,
+                            onComplete = { completed ->
+                                personInfo = completed
+                            }
+                        )
+                    } else {
+                        ContentView(
+                            personInfo = personInfo!!,
+                            onUpdatePerson = { personInfo = it },
+                            onLogout = { personInfo = null }
+                        )
+                    }
                 } else {
                     AuthView(onLoginSuccess = { personInfo = it })
                 }

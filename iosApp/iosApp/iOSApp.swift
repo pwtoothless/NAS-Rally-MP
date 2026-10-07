@@ -64,6 +64,39 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
+struct OnboardingFlowContainerView: View {
+    @Binding var person: PersonInfo
+    @State private var step: OnboardingStep = .tos
+
+    var body: some View {
+        Group {
+            switch step {
+            case .signup, .tos:
+                TOSView(person: $person) {
+                    step = .onboarding
+                }
+            case .onboarding:
+                OnboardingView(person: $person) {
+                    step = .idPrompt
+                }
+            case .idPrompt:
+                IDPromptView(
+                    onProvideIDNow: {
+                        step = .idUpload
+                    },
+                    onSkip: {
+                        person.tos = true
+                    }
+                )
+            case .idUpload:
+                IDView(person: $person, isOnboarding: true) {
+                    person.tos = true
+                }
+            }
+        }
+    }
+}
+
 @main
 struct iOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
@@ -76,12 +109,21 @@ struct iOSApp: App {
                 if isLoading {
                     ProgressView("Loading Profile...")
                 } else if let person = personInfo {
-                    ContentView(
-                        person: Binding(
-                            get: { person },
-                            set: { personInfo = $0 }
+                    if !person.tos {
+                        OnboardingFlowContainerView(
+                            person: Binding(
+                                get: { person },
+                                set: { personInfo = $0 }
+                            )
                         )
-                    )
+                    } else {
+                        ContentView(
+                            person: Binding(
+                                get: { person },
+                                set: { personInfo = $0 }
+                            )
+                        )
+                    }
                 } else {
                     LoginView(person: Binding(
                         get: { personInfo ?? PersonInfo(id: UUID(), name: "", theme: "Auto", bio: "", ralliesJoined: 0, rallieNames: [], privligeLevel: "", tos: false, instaHandle: "", carModel: "", phoneNumber: "") },

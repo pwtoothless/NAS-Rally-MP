@@ -34,6 +34,9 @@ struct ContentView: View {
                         Tab("Onboarding-Test", systemImage: "long.text.page.and.pencil") {
                             OnboardingView(person: $person)
                         }
+                        Tab("TOS-Test", systemImage: "long.text.page.and.pencil") {
+                            TOSView(person: $person)
+                        }
                     }
                 }
                 .tabViewStyle(.sidebarAdaptable)

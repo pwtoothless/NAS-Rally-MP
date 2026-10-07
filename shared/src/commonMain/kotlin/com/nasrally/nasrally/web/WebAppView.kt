@@ -102,6 +102,7 @@ import com.nasrally.nasrally.views.AdminView
 import com.nasrally.nasrally.views.AsyncImage
 import com.nasrally.nasrally.views.IDView
 import com.nasrally.nasrally.views.MessageBubble
+import com.nasrally.nasrally.views.OnboardingFlowContainer
 import com.nasrally.nasrally.views.ReadReceiptsDialog
 import com.nasrally.nasrally.views.UserProfileSheetDialog
 import com.nasrally.nasrally.views.ProfileView
@@ -146,11 +147,20 @@ fun WebApp() {
                     }
                 }
             } else if (personInfo != null) {
-                WebContentView(
-                    personInfo = personInfo!!,
-                    onUpdatePerson = { personInfo = it },
-                    onLogout = { personInfo = null }
-                )
+                if (!personInfo!!.tos) {
+                    OnboardingFlowContainer(
+                        person = personInfo!!,
+                        onComplete = { completed ->
+                            personInfo = completed
+                        }
+                    )
+                } else {
+                    WebContentView(
+                        personInfo = personInfo!!,
+                        onUpdatePerson = { personInfo = it },
+                        onLogout = { personInfo = null }
+                    )
+                }
             } else {
                 WebAuthView(onLoginSuccess = { personInfo = it })
             }
@@ -442,138 +452,148 @@ private fun WebSignupForm(
     var showPasswordMismatch by remember { mutableStateOf(false) }
     var signupErrorMessage by remember { mutableStateOf("") }
     var isSigningUp by remember { mutableStateOf(false) }
+    var signedUpPerson by remember { mutableStateOf<PersonInfo?>(null) }
     val scope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Create Web Account",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = "Join NASRally to access events and live chat",
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedTextField(
-            value = nameInput,
-            onValueChange = { nameInput = it },
-            label = { Text("Full Name") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-            value = emailInput,
-            onValueChange = { emailInput = it },
-            label = { Text("Email Address") },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-            value = passInput,
-            onValueChange = { passInput = it },
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = null
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        OutlinedTextField(
-            value = confirmPassInput,
-            onValueChange = { confirmPassInput = it },
-            label = { Text("Confirm Password") },
-            singleLine = true,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (showPasswordMismatch) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Passwords do not match",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        if (signupErrorMessage.isNotBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = signupErrorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                if (passInput == confirmPassInput) {
-                    showPasswordMismatch = false
-                    signupErrorMessage = ""
-                    isSigningUp = true
-
-                    scope.launch {
-                        val result = signup(nameInput, emailInput, passInput)
-                        when (result) {
-                            is AuthResult.Success -> onSignUpSuccess(result.person)
-                            is AuthResult.Failure -> signupErrorMessage = result.message
-                        }
-                        isSigningUp = false
-                    }
-                } else {
-                    showPasswordMismatch = true
-                    signupErrorMessage = ""
-                }
-            },
-            enabled = !isSigningUp && nameInput.isNotBlank() && emailInput.isNotBlank() && passInput.isNotBlank(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        ) {
-            if (isSigningUp) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Creating Account...")
-            } else {
-                Text("Sign Up", fontWeight = FontWeight.Bold)
+    if (signedUpPerson != null) {
+        OnboardingFlowContainer(
+            person = signedUpPerson!!,
+            onComplete = { completed ->
+                onSignUpSuccess(completed)
             }
-        }
+        )
+    } else {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Create Web Account",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Join NASRally to access events and live chat",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-        TextButton(onClick = onSwitchToLogin) {
-            Text("Already have an account? Log in")
+            OutlinedTextField(
+                value = nameInput,
+                onValueChange = { nameInput = it },
+                label = { Text("Full Name") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = emailInput,
+                onValueChange = { emailInput = it },
+                label = { Text("Email Address") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = passInput,
+                onValueChange = { passInput = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = confirmPassInput,
+                onValueChange = { confirmPassInput = it },
+                label = { Text("Confirm Password") },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (showPasswordMismatch) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Passwords do not match",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            if (signupErrorMessage.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = signupErrorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = {
+                    if (passInput == confirmPassInput) {
+                        showPasswordMismatch = false
+                        signupErrorMessage = ""
+                        isSigningUp = true
+
+                        scope.launch {
+                            val result = signup(nameInput, emailInput, passInput)
+                            when (result) {
+                                is AuthResult.Success -> signedUpPerson = result.person
+                                is AuthResult.Failure -> signupErrorMessage = result.message
+                            }
+                            isSigningUp = false
+                        }
+                    } else {
+                        showPasswordMismatch = true
+                        signupErrorMessage = ""
+                    }
+                },
+                enabled = !isSigningUp && nameInput.isNotBlank() && emailInput.isNotBlank() && passInput.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                if (isSigningUp) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Creating Account...")
+                } else {
+                    Text("Sign Up", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            TextButton(onClick = onSwitchToLogin) {
+                Text("Already have an account? Log in")
+            }
         }
     }
 }
