@@ -35,12 +35,6 @@ struct ContentView: View {
                             Tab("Admin", systemImage: "person.badge.checkmark.seal.fill", value: 5) {
                                 AdminView(person: $person)
                             }
-                            Tab("Onboarding-Test", systemImage: "long.text.page.and.pencil", value: 6) {
-                                OnboardingView(person: $person)
-                            }
-                            Tab("TOS-Test", systemImage: "long.text.page.and.pencil", value: 7) {
-                                TOSView(person: $person)
-                            }
                         }
                     }
                     .tabViewStyle(.sidebarAdaptable)
