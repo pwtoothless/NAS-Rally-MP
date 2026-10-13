@@ -6,6 +6,12 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict/>
+	<key>NSCalendarsUsageDescription</key>
+	<string>NAS Rally needs permission to add rally events to your calendar.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>NAS Rally needs permission to add rally events to your calendar.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>NAS Rally needs permission to add rally events to your calendar.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

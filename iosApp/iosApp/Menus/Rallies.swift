@@ -174,16 +174,34 @@ struct RallyUserDetailSheet: View {
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        if let start = rally.event_start, let end = rally.event_end, !start.isEmpty {
-                            HStack {
-                                Image(systemName: "calendar")
+                        HStack {
+                            Image(systemName: "calendar")
+                                .foregroundColor(person.themeColor)
+                            Text(rally.event_start.map { "\($0) — \(rally.event_end ?? "")" } ?? "Event Schedule")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                CalendarManager.shared.addEventToCalendar(
+                                    title: rally.name,
+                                    description: rally.description ?? "",
+                                    startDateStr: rally.event_start,
+                                    endDateStr: rally.event_end
+                                )
+                            }) {
+                                Label("Add", systemImage: "calendar.badge.plus")
+                                    .font(.caption)
+                                    .bold()
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(person.themeColor.opacity(0.15))
                                     .foregroundColor(person.themeColor)
-                                Text("\(start) — \(end)")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
+                                    .cornerRadius(8)
                             }
-                            .padding(.top, 12)
                         }
+                        .padding(.top, 12)
                         
                         if let cost = rally.event_cost {
                             HStack {

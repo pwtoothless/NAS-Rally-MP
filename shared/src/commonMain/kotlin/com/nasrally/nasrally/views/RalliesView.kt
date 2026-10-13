@@ -48,6 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.nasrally.nasrally.CalendarManager
+import com.nasrally.nasrally.RallyCalendarEvent
 import com.nasrally.nasrally.DatabaseRally
 import com.nasrally.nasrally.PersonInfo
 import com.nasrally.nasrally.RallyParticipantRow
@@ -307,8 +309,15 @@ fun RallyUserDetailDialog(
                         .weight(1f, fill = false)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    if (!rally.eventStart.isNull_or_empty() && !rally.eventEnd.isNull_or_empty()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.CalendarMonth,
                                 contentDescription = null,
@@ -317,13 +326,29 @@ fun RallyUserDetailDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "${rally.eventStart} — ${rally.eventEnd}",
+                                text = if (!rally.eventStart.isNull_or_empty() && !rally.eventEnd.isNull_or_empty())
+                                    "${rally.eventStart} — ${rally.eventEnd}"
+                                else "Event Schedule",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = {
+                                val event = RallyCalendarEvent(
+                                    id = rally.id,
+                                    title = rally.name,
+                                    description = rally.description,
+                                    startDateIso = rally.eventStart,
+                                    endDateIso = rally.eventEnd
+                                )
+                                CalendarManager.addEventToCalendar(event)
+                            }
+                        ) {
+                            Text("Add to Calendar", fontSize = 12.sp)
+                        }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     rally.eventCost?.let { cost ->
                         Row(verticalAlignment = Alignment.CenterVertically) {

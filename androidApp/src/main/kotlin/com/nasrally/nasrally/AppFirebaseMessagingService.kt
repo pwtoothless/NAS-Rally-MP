@@ -7,24 +7,40 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        // If the user logs in, we need to register the token. Since the token might refresh
-        // before login, the registration logic inside PushNotificationManager will ensure
-        // it checks if user is not null.
         PushNotificationManager.registerToken(token, "android")
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        
-        val notificationGroupId = message.data["group_id"]
+
+        val groupId = message.data["group_id"] ?: ""
+        val groupName = message.data["group_name"] ?: message.data["title"] ?: "New Message"
+        val senderName = message.data["sender_name"] ?: "Someone"
+        val bodyText = message.data["body"] ?: message.data["content"] ?: message.notification?.body ?: ""
+
         val currentActiveGroup = ActiveChatTracker.currentGroupId.value
-        
-        if (notificationGroupId != null && notificationGroupId == currentActiveGroup) {
-            // User is currently viewing this chat, suppress the notification
+
+        if (groupId.isNotBlank() && groupId == currentActiveGroup) {
+            // User is currently viewing this exact chat thread, suppress all alerts
             return
         }
-        
-        // Let Firebase handle the automatic notification display since it contains a notification payload
-        // Alternatively, if the message only contained data, we would build the NotificationCompat here.
+
+        if (NotificationManager.isAppInForeground) {
+            // In-App Handling: Route to NotificationManager to accumulate messages
+            // and trigger subtle in-app banner overlay every 10-20 messages
+            NotificationManager.onInAppMessageReceived(
+                groupId = groupId,
+                groupName = groupName,
+                senderName = senderName,
+                text = bodyText
+            )
+            return
+        }
+
+        // Out-of-App Handling: Check rate limiter (e.g. max 1 notification every 20s)
+        if (groupId.isNotBlank() && !NotificationManager.shouldAllowOutOfAppNotification(groupId)) {
+            // Rate limit exceeded for out-of-app notifications, suppress system notification
+            return
+        }
     }
 }

@@ -49,17 +49,39 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let userInfo = notification.request.content.userInfo
+        let groupId = userInfo["group_id"] as? String ?? ""
+        let groupName = userInfo["group_name"] as? String ?? userInfo["title"] as? String ?? "New Message"
+        let senderName = userInfo["sender_name"] as? String ?? "Someone"
+        let bodyText = notification.request.content.body
         
-        if let notificationGroupId = userInfo["group_id"] as? String,
-           let currentGroup = ActiveChatTracker.shared.currentGroupId.value as? String,
-           notificationGroupId == currentGroup {
+        let currentGroup = ActiveChatTracker.shared.currentGroupId.value as? String
+        if !groupId.isEmpty && groupId == currentGroup {
             completionHandler([])
+            return
+        }
+        
+        if UIApplication.shared.applicationState == .active {
+            // App is in foreground (inside the app) -> Route to in-app message accumulator
+            NotificationManager.shared.onInAppMessageReceived(
+                groupId: groupId,
+                groupName: groupName,
+                senderName: senderName,
+                text: bodyText
+            )
+            completionHandler([])
+            return
+        }
+        
+        // App is outside/background -> Check 20-second rate limiter
+        if !groupId.isEmpty && !NotificationManager.shared.shouldAllowOutOfAppNotification(groupId: groupId, cooldownMillis: 20000) {
+            completionHandler([])
+            return
+        }
+        
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .sound, .badge])
         } else {
-            if #available(iOS 14.0, *) {
-                completionHandler([.banner, .sound, .badge])
-            } else {
-                completionHandler([.alert, .sound, .badge])
-            }
+            completionHandler([.alert, .sound, .badge])
         }
     }
 }
