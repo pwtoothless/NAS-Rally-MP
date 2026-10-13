@@ -7,6 +7,8 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
@@ -176,6 +178,22 @@ suspend fun logout() {
         supabase.auth.signOut()
     } catch (e: Exception) {
         println("Logout failed: ${e.message}")
+    }
+}
+
+suspend fun deleteUserAccount(userId: String) {
+    if (userId.isBlank() || userId == PersonInfo.TEST_USER_ID) return
+    try {
+        supabase.postgrest.rpc("delete_user_account", buildJsonObject { put("target_user_id", userId) })
+    } catch (e: Exception) {
+        println("RPC delete_user_account failed: ${e.message}, falling back to profile status update.")
+        try {
+            supabase.from("profiles").update(mapOf("privligeLevel" to "Removed")) {
+                filter { eq("id", userId) }
+            }
+        } catch (ex: Exception) {
+            println("Fallback profile update failed: ${ex.message}")
+        }
     }
 }
 

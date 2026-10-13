@@ -29,6 +29,19 @@ func logout() async {
     try? await supabase.auth.signOut()
 }
 
+func deleteUserAccount(userId: UUID) async {
+    guard userId != PersonInfo.testUserID else { return }
+    do {
+        try await supabase.rpc("delete_user_account", params: ["target_user_id": userId.uuidString]).execute()
+    } catch {
+        print("RPC delete_user_account failed: \(error), attempting fallback profile update...")
+        try? await supabase.from("profiles")
+            .update(["privligeLevel": "Removed"])
+            .eq("id", value: userId.uuidString)
+            .execute()
+    }
+}
+
 nonisolated private struct SupabasePersonRow: Codable {
     var id: UUID
     var name: String?

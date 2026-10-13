@@ -1,7 +1,9 @@
 package com.nasrally.nasrally.views
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,9 +32,11 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -72,8 +76,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import com.nasrally.nasrally.AdminProfile
 import com.nasrally.nasrally.DatabaseRally
+import com.nasrally.nasrally.deleteUserAccount
 import com.nasrally.nasrally.GroupInsertRow
 import com.nasrally.nasrally.GroupMemberInsert
 import com.nasrally.nasrally.GroupRow
@@ -113,6 +121,8 @@ fun AdminView(person: PersonInfo) {
     var selectedUserForRole by remember { mutableStateOf<AdminProfile?>(null) }
     var selectedUserForApproval by remember { mutableStateOf<AdminProfile?>(null) }
     var selectedUserForProfile by remember { mutableStateOf<AdminProfile?>(null) }
+    var userToDeleteStep1 by remember { mutableStateOf<AdminProfile?>(null) }
+    var userToDeleteStep2 by remember { mutableStateOf<AdminProfile?>(null) }
 
     val scope = rememberCoroutineScope()
 
@@ -195,7 +205,8 @@ fun AdminView(person: PersonInfo) {
                 when (selectedTab) {
                     0 -> UsersTabView(
                         users = users,
-                        onSelectUser = { selectedUserForProfile = it }
+                        onSelectUser = { selectedUserForProfile = it },
+                        onInitiateDelete = { userToDeleteStep1 = it }
                     )
                     1 -> RalliesTabView(
                         rallies = rallies,
@@ -280,65 +291,199 @@ fun AdminView(person: PersonInfo) {
             onDismiss = { selectedUserForProfile = null }
         )
     }
+
+    userToDeleteStep1?.let { user ->
+        AlertDialog(
+            onDismissRequest = { userToDeleteStep1 = null },
+            title = { Text("Delete Account for ${user.name}?") },
+            text = { Text("Are you sure you want to remove account access for ${user.name}?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = user
+                        userToDeleteStep1 = null
+                        userToDeleteStep2 = target
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToDeleteStep1 = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    userToDeleteStep2?.let { user ->
+        AlertDialog(
+            onDismissRequest = { userToDeleteStep2 = null },
+            title = { Text("FINAL WARNING: Delete Account") },
+            text = { Text("This will permanently delete login credentials for ${user.name}. Their profile record and signed waivers will be retained for legal compliance. Are you sure you want to proceed?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = user
+                        userToDeleteStep2 = null
+                        scope.launch {
+                            deleteUserAccount(target.id)
+                            loadData()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Confirm Delete Account")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToDeleteStep2 = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun UsersTabView(
     users: List<AdminProfile>,
-    onSelectUser: (AdminProfile) -> Unit
+    onSelectUser: (AdminProfile) -> Unit,
+    onInitiateDelete: (AdminProfile) -> Unit
 ) {
+    val activeUsers = remember(users) { users.filter { it.privligeLevel != "Removed" } }
+
     LazyColumn(modifier = Modifier.padding(16.dp)) {
-        items(users) { user ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clickable { onSelectUser(user) },
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    UserAvatar(
-                        userId = user.id,
-                        userName = user.name,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = user.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        if (user.bio.isNotBlank()) {
-                            Text(
-                                text = user.bio,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (user.privligeLevel == "Admin") Color(0xFFFFEBEE) else Color(0xFFE3F2FD)
-                    ) {
-                        Text(
-                            text = user.privligeLevel,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (user.privligeLevel == "Admin") Color(0xFFC62828) else Color(0xFF1565C0)
-                        )
+        items(activeUsers, key = { it.id }) { user ->
+            var menuExpanded by remember { mutableStateOf(false) }
+            val dismissState = rememberSwipeToDismissBoxState(
+                confirmValueChange = { value ->
+                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                        onInitiateDelete(user)
+                        false
+                    } else {
+                        false
                     }
                 }
-            }
+            )
+
+            SwipeToDismissBox(
+                state = dismissState,
+                backgroundContent = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFD32F2F))
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Account",
+                            tint = Color.White
+                        )
+                    }
+                },
+                content = {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .combinedClickable(
+                                onClick = { onSelectUser(user) },
+                                onLongClick = { menuExpanded = true }
+                            ),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            UserAvatar(
+                                userId = user.id,
+                                userName = user.name,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = user.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                if (user.bio.isNotBlank()) {
+                                    Text(
+                                        text = user.bio,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (user.privligeLevel == "Admin") Color(0xFFFFEBEE) else Color(0xFFE3F2FD)
+                            ) {
+                                Text(
+                                    text = user.privligeLevel,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (user.privligeLevel == "Admin") Color(0xFFC62828) else Color(0xFF1565C0)
+                                )
+                            }
+
+                            Box {
+                                IconButton(onClick = { menuExpanded = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "Options",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = menuExpanded,
+                                    onDismissRequest = { menuExpanded = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Profile") },
+                                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            onSelectUser(user)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("ID") },
+                                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            onSelectUser(user)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Delete Account", color = MaterialTheme.colorScheme.error) },
+                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            onInitiateDelete(user)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            )
         }
     }
 }

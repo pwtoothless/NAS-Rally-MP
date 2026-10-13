@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
@@ -37,7 +38,9 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -87,6 +90,7 @@ import com.nasrally.nasrally.RallyParticipantRow
 import com.nasrally.nasrally.RallyRequestInsert
 import com.nasrally.nasrally.RallyRequestRow
 import com.nasrally.nasrally.Waiver
+import com.nasrally.nasrally.deleteUserAccount
 import com.nasrally.nasrally.fetchCurrentProfile
 import com.nasrally.nasrally.fetchUserWaivers
 import com.nasrally.nasrally.getPlatform
@@ -607,6 +611,8 @@ fun WebContentView(
     var selectedTab by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     var themeMenuExpanded by remember { mutableStateOf(false) }
+    var showSelfDeleteConfirmStep1 by remember { mutableStateOf(false) }
+    var showSelfDeleteConfirmStep2 by remember { mutableStateOf(false) }
     val platformName = remember { getPlatform().name }
     val isDesktop = remember(platformName) { platformName.contains("Java", ignoreCase = true) || platformName.contains("JVM", ignoreCase = true) }
 
@@ -806,19 +812,33 @@ fun WebContentView(
                             }
                         }
 
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    logout()
-                                    onLogout()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        logout()
+                                        onLogout()
+                                    }
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Logout,
+                                    contentDescription = "Log out",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Logout,
-                                contentDescription = "Log out",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            IconButton(
+                                onClick = { showSelfDeleteConfirmStep1 = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteForever,
+                                    contentDescription = "Delete Account",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }
@@ -917,6 +937,58 @@ fun WebContentView(
                 }
             }
         }
+    }
+
+    if (showSelfDeleteConfirmStep1) {
+        AlertDialog(
+            onDismissRequest = { showSelfDeleteConfirmStep1 = false },
+            title = { Text("Delete Your Account?") },
+            text = { Text("Are you sure you want to delete your account? This will log you out and remove your login credentials.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSelfDeleteConfirmStep1 = false
+                        showSelfDeleteConfirmStep2 = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSelfDeleteConfirmStep1 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showSelfDeleteConfirmStep2) {
+        AlertDialog(
+            onDismissRequest = { showSelfDeleteConfirmStep2 = false },
+            title = { Text("FINAL WARNING: Delete Account") },
+            text = { Text("This action cannot be undone. Your login credentials will be permanently removed. Your profile record and signed waivers will be retained for legal compliance. Are you sure you want to proceed?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSelfDeleteConfirmStep2 = false
+                        scope.launch {
+                            deleteUserAccount(personInfo.id)
+                            logout()
+                            onLogout()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Confirm Delete Account")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSelfDeleteConfirmStep2 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

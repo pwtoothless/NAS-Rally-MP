@@ -110,7 +110,9 @@ struct AdminView: View {
                 } else {
                     switch selectedTab {
                     case 0:
-                        UsersTabView(users: users)
+                        UsersTabView(users: users, onDeleteComplete: {
+                            await loadAdminData()
+                        })
                     case 1:
                         RalliesTabView(
                             rallies: rallies,
@@ -314,9 +316,20 @@ struct AdminView: View {
 
 struct UsersTabView: View {
     let users: [AdminProfile]
+    let onDeleteComplete: () async -> Void
+    
+    @State private var selectedUserForProfile: AdminProfile? = nil
+    @State private var userToDeleteStep1: AdminProfile? = nil
+    @State private var userToDeleteStep2: AdminProfile? = nil
+    @State private var showDeleteConfirmStep1 = false
+    @State private var showDeleteConfirmStep2 = false
+    
+    var activeUsers: [AdminProfile] {
+        users.filter { $0.privligeLevel != "Removed" }
+    }
     
     var body: some View {
-        List(users) { user in
+        List(activeUsers) { user in
             HStack(spacing: 12) {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.title2)
@@ -345,8 +358,78 @@ struct UsersTabView: View {
                     .cornerRadius(8)
             }
             .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectedUserForProfile = user
+            }
+            .contextMenu {
+                Button(action: {
+                    selectedUserForProfile = user
+                }) {
+                    Label("Profile", systemImage: "person.crop.circle")
+                }
+                
+                Button(action: {
+                    selectedUserForProfile = user
+                }) {
+                    Label("ID", systemImage: "person.text.rectangle")
+                }
+                
+                Button(role: .destructive, action: {
+                    userToDeleteStep1 = user
+                    showDeleteConfirmStep1 = true
+                }) {
+                    Label("Delete Account", systemImage: "trash")
+                }
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    userToDeleteStep1 = user
+                    showDeleteConfirmStep1 = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         }
         .listStyle(.insetGrouped)
+        .sheet(item: $selectedUserForProfile) { user in
+            UserProfileDetailSheet(user: user)
+        }
+        .alert(
+            "Delete Account for \(userToDeleteStep1?.name ?? "User")?",
+            isPresented: $showDeleteConfirmStep1
+        ) {
+            Button("Continue", role: .destructive) {
+                userToDeleteStep2 = userToDeleteStep1
+                showDeleteConfirmStep2 = true
+            }
+            Button("Cancel", role: .cancel) {
+                userToDeleteStep1 = nil
+            }
+        } message: {
+            Text("Are you sure you want to remove account access for \(userToDeleteStep1?.name ?? "this user")?")
+        }
+        .alert(
+            "FINAL WARNING: Delete Account",
+            isPresented: $showDeleteConfirmStep2
+        ) {
+            Button("Confirm Delete Account", role: .destructive) {
+                if let user = userToDeleteStep2 {
+                    Task {
+                        await deleteUserAccount(userId: user.id)
+                        await onDeleteComplete()
+                    }
+                }
+                userToDeleteStep1 = nil
+                userToDeleteStep2 = nil
+            }
+            Button("Cancel", role: .cancel) {
+                userToDeleteStep1 = nil
+                userToDeleteStep2 = nil
+            }
+        } message: {
+            Text("This will permanently delete login credentials for \(userToDeleteStep2?.name ?? "this user"). Their profile record and signed waivers will be retained for legal compliance.")
+        }
     }
 }
 
