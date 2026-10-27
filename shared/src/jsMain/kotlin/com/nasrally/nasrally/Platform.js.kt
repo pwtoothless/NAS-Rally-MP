@@ -2,6 +2,9 @@ package com.nasrally.nasrally
 
 import web.navigator.navigator
 
+/**
+ * JS Web platform descriptor implementation.
+ */
 class JsPlatform: Platform {
     private val userAgent = navigator.userAgent
     private val browserList = listOf("Chrome", "Firefox", "Safari", "Edge")
@@ -11,4 +14,7 @@ class JsPlatform: Platform {
             ?: "Unknown"
 }
 
+/**
+ * Returns [JsPlatform] instance.
+ */
 actual fun getPlatform(): Platform = JsPlatform()

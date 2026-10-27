@@ -42,6 +42,9 @@ import androidx.compose.runtime.Composable
 """)
 private external fun jsLaunchImagePicker(source: String, callback: (JsAny) -> Unit)
 
+/**
+ * Wasm/JS Web image picker implementation invoking JavaScript interop function [jsLaunchImagePicker].
+ */
 @Composable
 actual fun rememberImagePicker(
     source: ImageSource,

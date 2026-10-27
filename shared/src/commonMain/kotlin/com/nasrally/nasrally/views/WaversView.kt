@@ -57,6 +57,11 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Screen displaying pending and signed event waivers for the user.
+ *
+ * @param person Current user profile.
+ */
 @Composable
 fun WaversView(person: PersonInfo) {
     var selectedTab by remember { mutableStateOf(0) } // 0: Pending, 1: Signed

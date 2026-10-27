@@ -60,6 +60,11 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Rally event discovery and participation request screen.
+ *
+ * @param person Current user profile.
+ */
 @Composable
 fun RalliesView(person: PersonInfo) {
     var allRallies by remember { mutableStateOf<List<DatabaseRally>>(emptyList()) }

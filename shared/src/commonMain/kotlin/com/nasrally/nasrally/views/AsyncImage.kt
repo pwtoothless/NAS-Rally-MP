@@ -23,12 +23,21 @@ import org.jetbrains.compose.resources.decodeToImageBitmap
 
 private val imageHttpClient = HttpClient()
 
+/**
+ * Represents states for asynchronous image loading.
+ */
 sealed class AsyncImageState {
+    /** Image is currently loading. */
     object Loading : AsyncImageState()
+    /** Image loaded successfully with [bitmap]. */
     data class Success(val bitmap: ImageBitmap) : AsyncImageState()
+    /** Image loading failed with [throwable]. */
     data class Error(val throwable: Throwable? = null) : AsyncImageState()
 }
 
+/**
+ * Asynchronously loads and renders an image from HTTP [url].
+ */
 @Composable
 fun AsyncImage(
     url: String?,

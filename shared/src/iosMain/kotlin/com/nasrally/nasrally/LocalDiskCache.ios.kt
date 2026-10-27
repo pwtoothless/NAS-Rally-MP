@@ -13,6 +13,9 @@ import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.getBytes
 import platform.Foundation.writeToFile
 
+/**
+ * iOS actual disk file cache implementation writing data files to [NSCachesDirectory].
+ */
 @OptIn(ExperimentalForeignApi::class)
 actual object LocalDiskCache {
     private fun getCachePath(): String {

@@ -9,6 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import java.io.ByteArrayOutputStream
 
+/**
+ * Android image picker implementation using Activity Result Contracts ([ActivityResultContracts.TakePicturePreview] or [ActivityResultContracts.PickVisualMedia]).
+ */
 @Composable
 actual fun rememberImagePicker(
     source: ImageSource,

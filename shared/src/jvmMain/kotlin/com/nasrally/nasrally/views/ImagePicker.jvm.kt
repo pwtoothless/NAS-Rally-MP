@@ -10,6 +10,9 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.imageio.ImageIO
 
+/**
+ * JVM Desktop image picker implementation using AWT [FileDialog].
+ */
 @Composable
 actual fun rememberImagePicker(
     source: ImageSource,

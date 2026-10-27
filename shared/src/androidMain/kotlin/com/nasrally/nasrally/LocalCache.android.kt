@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.util.prefs.Preferences
 
+/**
+ * Android actual preference cache implementation backed by [SharedPreferences] (and Java Preferences fallback).
+ */
 actual object LocalCache {
     private val sharedPrefs: SharedPreferences? by lazy {
         try {

@@ -3,13 +3,33 @@ package com.nasrally.nasrally
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
+/**
+ * Firebase Cloud Messaging service handling push notification token refreshes and incoming message payloads.
+ *
+ * Implements message filtering logic to suppress alerts when a user is actively viewing a chat thread,
+ * queues subtle in-app message banners when the app is in the foreground, and applies rate-limiting to system notifications.
+ */
 class AppFirebaseMessagingService : FirebaseMessagingService() {
 
+    /**
+     * Triggered when a new FCM registration token is generated for the device.
+     *
+     * @param token The updated FCM token.
+     */
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         PushNotificationManager.registerToken(token, "android")
     }
 
+    /**
+     * Handles incoming remote push messages.
+     *
+     * Evaluates message context against [ActiveChatTracker] to suppress notifications for currently active chat threads,
+     * routes messages to [NotificationManager] for in-app banner accumulation when in foreground, or enforces rate-limiting
+     * for system notification banners when out-of-app.
+     *
+     * @param message The received [RemoteMessage] payload.
+     */
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 

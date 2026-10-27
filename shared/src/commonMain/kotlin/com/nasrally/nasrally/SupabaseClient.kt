@@ -30,6 +30,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
+/**
+ * Main Supabase client instance configured with Auth, Postgrest, Realtime, and Storage modules.
+ */
 val supabase = createSupabaseClient(
     supabaseUrl = "https://api-nas-rally.mayflower-paradise.us",
     supabaseKey = "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"
@@ -40,6 +43,11 @@ val supabase = createSupabaseClient(
     install(Storage)
 }
 
+/**
+ * Fetches the currently authenticated user's profile information.
+ *
+ * @return [PersonInfo] profile if authenticated; `null` otherwise.
+ */
 suspend fun fetchCurrentProfile(): PersonInfo? {
     try {
         supabase.auth.awaitInitialization()
@@ -52,6 +60,12 @@ suspend fun fetchCurrentProfile(): PersonInfo? {
     return loadPersonInfo(user.id) ?: loadPersonInfoOrCreateDefault(user.id, userName)
 }
 
+/**
+ * Loads [PersonInfo] profile from Supabase `profiles` table for [userId].
+ *
+ * @param userId Unique user ID.
+ * @return [PersonInfo] if found; `null` if profile query fails or doesn't exist.
+ */
 suspend fun loadPersonInfo(userId: String): PersonInfo? {
     return try {
         val row = supabase.from("profiles")
@@ -105,6 +119,13 @@ suspend fun loadPersonInfo(userId: String): PersonInfo? {
     }
 }
 
+/**
+ * Loads existing profile or creates a default profile row if missing.
+ *
+ * @param userId Unique user ID.
+ * @param name Default name string.
+ * @return [PersonInfo] instance.
+ */
 suspend fun loadPersonInfoOrCreateDefault(userId: String, name: String): PersonInfo {
     val existing = loadPersonInfo(userId)
     if (existing != null) return existing
@@ -126,6 +147,13 @@ suspend fun loadPersonInfoOrCreateDefault(userId: String, name: String): PersonI
     }
 }
 
+/**
+ * Authenticates user via email and password against Supabase Auth.
+ *
+ * @param emailInput User email address.
+ * @param passwordInput User password.
+ * @return [AuthResult] containing profile on success or error message on failure.
+ */
 suspend fun login(emailInput: String, passwordInput: String): AuthResult {
     return try {
         supabase.auth.signInWith(Email) {
@@ -143,6 +171,14 @@ suspend fun login(emailInput: String, passwordInput: String): AuthResult {
     }
 }
 
+/**
+ * Registers a new account via email/password and initializes user profile in database.
+ *
+ * @param nameInput Full name.
+ * @param emailInput Email address.
+ * @param passwordInput Password.
+ * @return [AuthResult] outcome.
+ */
 suspend fun signup(nameInput: String, emailInput: String, passwordInput: String): AuthResult {
     return try {
         supabase.auth.signUpWith(Email) {
@@ -173,6 +209,9 @@ suspend fun signup(nameInput: String, emailInput: String, passwordInput: String)
     }
 }
 
+/**
+ * Logs out current user session.
+ */
 suspend fun logout() {
     try {
         supabase.auth.signOut()
@@ -181,6 +220,11 @@ suspend fun logout() {
     }
 }
 
+/**
+ * Deletes user account via RPC function or marks user privilege level as Removed.
+ *
+ * @param userId Target user ID to delete.
+ */
 suspend fun deleteUserAccount(userId: String) {
     if (userId.isBlank() || userId == PersonInfo.TEST_USER_ID) return
     try {
@@ -197,11 +241,15 @@ suspend fun deleteUserAccount(userId: String) {
     }
 }
 
+/** Theme update row container. */
 @Serializable
 data class SupabaseThemeUpdateRow(
     val theme: String
 )
 
+/**
+ * Updates user theme preference in database.
+ */
 suspend fun updateTheme(userId: String, theme: String) {
     if (userId == PersonInfo.TEST_USER_ID) return
     try {
@@ -216,11 +264,15 @@ suspend fun updateTheme(userId: String, theme: String) {
     }
 }
 
+/** Terms of Service update row container. */
 @Serializable
 data class SupabaseTOSUpdateRow(
     val tos: Boolean
 )
 
+/**
+ * Updates Terms of Service acceptance state in database.
+ */
 suspend fun updateTOS(userId: String, tos: Boolean) {
     if (userId == PersonInfo.TEST_USER_ID) return
     try {
@@ -235,6 +287,9 @@ suspend fun updateTOS(userId: String, tos: Boolean) {
     }
 }
 
+/**
+ * Updates profile detail fields in database.
+ */
 suspend fun updateProfile(person: PersonInfo) {
     if (person.isTestUser) return
     val updateData = SupabaseProfileUpdateRow(
@@ -252,6 +307,9 @@ suspend fun updateProfile(person: PersonInfo) {
         }
 }
 
+/**
+ * Obtains public HTTP URL for user profile picture in Supabase Storage.
+ */
 suspend fun getProfileImageURL(userId: String): String? {
     if (userId.isBlank()) return null
     return try {
@@ -262,10 +320,16 @@ suspend fun getProfileImageURL(userId: String): String? {
     }
 }
 
+/**
+ * Obtains public HTTP URL for rally event logo in Supabase Storage.
+ */
 fun getRallyImageURL(name: String): String {
     return supabase.storage.from("RallyLogos").publicUrl("$name.png")
 }
 
+/**
+ * Fetches pending and signed waivers for [userId].
+ */
 suspend fun fetchUserWaivers(userId: String): UserWaiversResult {
     return try {
         val allWaivers: List<Waiver> = supabase.from("waivers")
@@ -299,6 +363,9 @@ suspend fun fetchUserWaivers(userId: String): UserWaiversResult {
     }
 }
 
+/**
+ * Downloads user identity card document image bytes from Supabase Storage.
+ */
 suspend fun fetchUserIDImageData(userId: String): ByteArray? {
     return try {
         supabase.storage.from("User-IDs").downloadAuthenticated("${userId.toUpperCasePreservingASCIIRules()}/userid.png")
@@ -310,6 +377,9 @@ suspend fun fetchUserIDImageData(userId: String): ByteArray? {
 
 private val imageHttpClient = HttpClient()
 
+/**
+ * Fetches and caches rally logo image bytes on local disk with 7-day expiration.
+ */
 suspend fun getCachedRallyLogoData(name: String): ByteArray? {
     if (name.isBlank()) return null
     val sanitized = name.replace("[^a-zA-Z0-9_-]".toRegex(), "_")
@@ -361,6 +431,7 @@ suspend fun getCachedRallyLogoData(name: String): ByteArray? {
     }
 }
 
+/** Memory cache for decoded user profile bitmaps. */
 object ProfileImageMemoryCache {
     private val cache = mutableMapOf<String, ImageBitmap>()
 
@@ -380,6 +451,7 @@ object ProfileImageMemoryCache {
     }
 }
 
+/** Memory cache for decoded rally logo bitmaps. */
 object RallyLogoMemoryCache {
     private val cache = mutableMapOf<String, ImageBitmap>()
 
@@ -395,6 +467,9 @@ object RallyLogoMemoryCache {
     }
 }
 
+/**
+ * Downloads and caches profile image bitmap.
+ */
 suspend fun getCachedProfileImageBitmap(userId: String): ImageBitmap? {
     if (userId.isBlank()) return null
     ProfileImageMemoryCache.get(userId)?.let { return it }
@@ -434,6 +509,9 @@ suspend fun getCachedProfileImageBitmap(userId: String): ImageBitmap? {
     }
 }
 
+/**
+ * Downloads profile image raw byte array with local disk caching.
+ */
 suspend fun getCachedProfileImageData(userId: String): ByteArray? {
     if (userId.isBlank()) return null
     val key = "profile_$userId.jpg"
@@ -469,6 +547,9 @@ suspend fun getCachedProfileImageData(userId: String): ByteArray? {
     }
 }
 
+/**
+ * Clears memory and disk cache entries for [userId]'s profile picture.
+ */
 fun invalidateCachedProfileImage(userId: String) {
     if (userId.isNotBlank()) {
         ProfileImageMemoryCache.remove(userId)
@@ -476,6 +557,9 @@ fun invalidateCachedProfileImage(userId: String) {
     }
 }
 
+/**
+ * Downloads and caches ID document image bytes for admin review.
+ */
 suspend fun getCachedUserIDImageData(userId: String, isAdmin: Boolean): ByteArray? {
     if (!isAdmin || userId.isBlank()) return null
     val key = "id_${userId.toUpperCasePreservingASCIIRules()}.png"
@@ -491,6 +575,9 @@ suspend fun getCachedUserIDImageData(userId: String, isAdmin: Boolean): ByteArra
     return downloaded
 }
 
+/**
+ * Loads sensitive administrative records from `sensitiveInfo` table.
+ */
 suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
     return try {
         val rows = supabase.from("sensitiveInfo")
@@ -503,16 +590,25 @@ suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
     }
 }
 
+/**
+ * Upserts sensitive administrative records to `sensitiveInfo` table.
+ */
 suspend fun saveSensitiveInfo(row: SensitiveInfoRow) {
     supabase.from("sensitiveInfo").upsert(row)
 }
 
+/**
+ * AI summary function response structure.
+ */
 @Serializable
 data class AISummaryResponse(
     val summary: String? = null,
     val error: String? = null
 )
 
+/**
+ * Invokes Supabase Edge Function `ai-summarization` to retrieve AI-generated rally summaries.
+ */
 suspend fun fetchAISummary(): String {
     val session = supabase.auth.currentSessionOrNull() ?: throw IllegalStateException("Not logged in")
     val accessToken = session.accessToken

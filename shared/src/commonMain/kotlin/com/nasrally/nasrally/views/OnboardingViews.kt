@@ -43,6 +43,9 @@ import com.nasrally.nasrally.updateProfile
 import com.nasrally.nasrally.updateTOS
 import kotlinx.coroutines.launch
 
+/**
+ * Steps in user onboarding workflow.
+ */
 enum class OnboardingStep {
     TOS,
     ONBOARDING,
@@ -50,6 +53,12 @@ enum class OnboardingStep {
     ID_UPLOAD
 }
 
+/**
+ * Container composable coordinating onboarding workflow steps.
+ *
+ * @param person User profile data.
+ * @param onComplete Callback invoked when onboarding flow finishes.
+ */
 @Composable
 fun OnboardingFlowContainer(
     person: PersonInfo,

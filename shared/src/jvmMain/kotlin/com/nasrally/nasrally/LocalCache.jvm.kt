@@ -2,6 +2,9 @@ package com.nasrally.nasrally
 
 import java.util.prefs.Preferences
 
+/**
+ * JVM Desktop actual preference cache implementation backed by [Preferences.userRoot].
+ */
 actual object LocalCache {
     private val prefs = Preferences.userRoot().node("nasrally_cache")
 

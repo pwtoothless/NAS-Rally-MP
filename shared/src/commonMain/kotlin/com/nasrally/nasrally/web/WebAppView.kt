@@ -117,6 +117,9 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Root composable for Desktop and Wasm/JS Web platforms featuring side-by-side multi-column desktop layouts.
+ */
 @Composable
 fun WebApp() {
     var personInfo by remember { mutableStateOf<PersonInfo?>(null) }

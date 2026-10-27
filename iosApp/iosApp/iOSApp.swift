@@ -8,6 +8,17 @@ import FirebaseCore
 import FirebaseMessaging
 import Shared
 
+//
+//  iOSApp.swift
+//  NAS Rally
+//
+
+import SwiftUI
+import FirebaseCore
+import FirebaseMessaging
+import Shared
+
+/// Main application delegate handling Firebase initialization and push notification registration.
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -86,6 +97,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
+/// Onboarding container view managing user terms of service and registration flow steps.
 struct OnboardingFlowContainerView: View {
     @Binding var person: PersonInfo
     @State private var step: OnboardingStep = .tos
@@ -119,6 +131,7 @@ struct OnboardingFlowContainerView: View {
     }
 }
 
+/// Root main entry point for NASRally native iOS app.
 @main
 struct iOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate

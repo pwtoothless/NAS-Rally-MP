@@ -6,6 +6,7 @@
 import SwiftUI
 import Shared
 
+/// Primary tab navigation container view for iOS app.
 struct ContentView: View {
     @Binding var person: PersonInfo
     @State private var bannerData: InAppBannerData? = nil

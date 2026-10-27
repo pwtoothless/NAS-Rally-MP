@@ -56,6 +56,12 @@ import com.nasrally.nasrally.views.WaversView
 import com.nasrally.nasrally.web.WebApp
 import kotlinx.coroutines.delay
 
+/**
+ * Root multiplatform entry composable for NASRally.
+ *
+ * Routes desktop/web platforms to [WebApp], handles user authentication checks, renders terms-of-service onboarding flows,
+ * and sets up the primary mobile container [ContentView].
+ */
 @Composable
 fun App() {
     val platformName = getPlatform().name
@@ -115,6 +121,13 @@ fun App() {
     }
 }
 
+/**
+ * Main application scaffold with bottom navigation bar and active tab rendering.
+ *
+ * @param personInfo Profile information for the logged-in user.
+ * @param onUpdatePerson Callback invoked when user profile state is modified.
+ * @param onLogout Callback invoked when the user logs out.
+ */
 @Composable
 fun ContentView(
     personInfo: PersonInfo,
@@ -200,6 +213,13 @@ fun ContentView(
     }
 }
 
+/**
+ * Overlay component rendering floating in-app chat notifications.
+ *
+ * @param data Notification data payload.
+ * @param onBannerClick Action when tapping the banner (navigates to Chat tab).
+ * @param onDismiss Action when dismissing the banner.
+ */
 @Composable
 fun SubtleInAppBannerOverlay(
     data: InAppBannerData,

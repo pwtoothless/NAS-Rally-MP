@@ -6,6 +6,9 @@ import org.w3c.dom.url.URL
 import org.w3c.files.Blob
 import org.w3c.files.BlobPropertyBag
 
+/**
+ * JS Web actual calendar manager implementation downloading .ics files via HTML anchor Blob URL trigger.
+ */
 actual object CalendarManager {
     actual fun addEventToCalendar(event: RallyCalendarEvent) {
         try {

@@ -3,6 +3,11 @@ package com.nasrally.nasrally
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
 
+/**
+ * iOS actual calendar manager implementation.
+ *
+ * Encodes iCalendar (.ics) content into a data URI scheme and opens it via [UIApplication.sharedApplication].
+ */
 actual object CalendarManager {
     actual fun addEventToCalendar(event: RallyCalendarEvent) {
         try {

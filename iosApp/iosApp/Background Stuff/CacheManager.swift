@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+/// In-memory image cache singleton wrapper around `NSCache`.
 final class MemoryImageCache: @unchecked Sendable {
     static let shared = MemoryImageCache()
     private let cache = NSCache<NSString, UIImage>()
@@ -18,6 +19,7 @@ final class MemoryImageCache: @unchecked Sendable {
     }
 }
 
+/// Local disk cache manager writing binary blob files to iOS caches directory.
 final class CacheManager: Sendable {
     static let shared = CacheManager()
     private let fileManager = FileManager.default

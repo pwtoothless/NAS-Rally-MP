@@ -1,5 +1,14 @@
 package com.nasrally.nasrally
 
+/**
+ * Data model representing a rally calendar event for export.
+ *
+ * @property id Unique identifier of the rally event.
+ * @property title Name/summary of the rally.
+ * @property description Details/description of the rally event.
+ * @property startDateIso ISO 8601 formatted start timestamp string.
+ * @property endDateIso ISO 8601 formatted end timestamp string.
+ */
 data class RallyCalendarEvent(
     val id: String,
     val title: String,
@@ -8,6 +17,12 @@ data class RallyCalendarEvent(
     val endDateIso: String?
 )
 
+/**
+ * Generates valid iCalendar (.ics) format file content from a [RallyCalendarEvent].
+ *
+ * @param event The rally calendar event data.
+ * @return Formatted iCalendar string payload.
+ */
 fun generateIcsContent(event: RallyCalendarEvent): String {
     val startStr = formatIcsDate(event.startDateIso)
     val endStr = formatIcsDate(event.endDateIso)
@@ -35,6 +50,9 @@ fun generateIcsContent(event: RallyCalendarEvent): String {
     }
 }
 
+/**
+ * Converts ISO 8601 date strings to iCalendar compliant UTC timestamp strings (YYYYMMDDTHHMMSSZ).
+ */
 private fun formatIcsDate(dateStr: String?): String {
     if (dateStr.isNullOrBlank()) return ""
     val cleaned = dateStr.replace("-", "").replace(":", "").replace(" ", "T")
@@ -47,6 +65,12 @@ private fun formatIcsDate(dateStr: String?): String {
     }
 }
 
+/**
+ * Multiplatform expect object for adding rally events directly to native system calendars.
+ */
 expect object CalendarManager {
+    /**
+     * Adds the specified [RallyCalendarEvent] to the device's native calendar.
+     */
     fun addEventToCalendar(event: RallyCalendarEvent)
 }

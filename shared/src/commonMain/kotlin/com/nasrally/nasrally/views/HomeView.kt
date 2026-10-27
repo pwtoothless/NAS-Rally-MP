@@ -58,6 +58,11 @@ import com.nasrally.nasrally.getProfileImageURL
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 
+/**
+ * Dashboard screen displaying user welcome banner and AI-generated notification summaries.
+ *
+ * @param person User profile state.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeView(person: PersonInfo) {

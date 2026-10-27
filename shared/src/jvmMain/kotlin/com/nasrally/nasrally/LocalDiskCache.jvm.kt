@@ -2,6 +2,9 @@ package com.nasrally.nasrally
 
 import java.io.File
 
+/**
+ * JVM Desktop actual disk cache implementation writing data files to temporary directory.
+ */
 actual object LocalDiskCache {
     private fun getCacheDir(): File {
         val tmpDir = System.getProperty("java.io.tmpdir") ?: "."

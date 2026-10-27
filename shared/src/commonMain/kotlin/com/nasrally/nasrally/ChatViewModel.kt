@@ -19,21 +19,47 @@ import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * ViewModel managing chat state, pagination, read receipts, member profiles, and Supabase Realtime message streaming.
+ *
+ * @property groupId The unique ID of the group chat thread managed by this view model.
+ * @property scope Coroutine scope bound to the life of the view model or UI component.
+ */
 @OptIn(ExperimentalUuidApi::class)
 class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
+
+    /**
+     * [StateFlow] emitting the list of chat messages, sorted newest first.
+     */
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
 
     private val _groupMembers = MutableStateFlow<List<PersonInfo>>(emptyList())
+
+    /**
+     * [StateFlow] emitting members enrolled in this chat group.
+     */
     val groupMembers: StateFlow<List<PersonInfo>> = _groupMembers.asStateFlow()
 
     private val _profilesMap = MutableStateFlow<Map<String, PersonInfo>>(emptyMap())
+
+    /**
+     * [StateFlow] mapping user IDs to their cached [PersonInfo] profile records.
+     */
     val profilesMap: StateFlow<Map<String, PersonInfo>> = _profilesMap.asStateFlow()
 
     private val _readReceipts = MutableStateFlow<Map<String, List<ReadReceipt>>>(emptyMap())
+
+    /**
+     * [StateFlow] mapping message IDs to their list of read receipt records.
+     */
     val readReceipts: StateFlow<Map<String, List<ReadReceipt>>> = _readReceipts.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
+
+    /**
+     * [StateFlow] indicating whether a message history fetch is in progress.
+     */
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val pageSize = 50
@@ -49,6 +75,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Loads locally cached messages from [LocalCache].
+     */
     private fun loadCachedMessages() {
         val cachedJson = LocalCache.getString(cacheKey) ?: return
         try {
@@ -61,6 +90,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Persists top 50 messages to [LocalCache].
+     */
     private fun saveCachedMessages(list: List<Message>) {
         try {
             val top50 = list.take(50)
@@ -71,6 +103,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Fetches group members and populates user profile records.
+     */
     suspend fun loadGroupMembers() {
         try {
             val memberRows: List<GroupMemberRow> = supabase.from("group_members")
@@ -94,6 +129,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Connects Supabase Realtime channels for live Postgres insertions into `messages` and `read_receipts` tables.
+     */
     private fun setupRealtimeSubscription() {
         val channel = supabase.channel("chat:$groupId")
         val changeFlow = channel.postgresChangeFlow<PostgresAction.Insert>(
@@ -143,6 +181,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         scope.launch { readChannel.subscribe() }
     }
 
+    /**
+     * Ensures sender profile information is cached in [_profilesMap].
+     */
     private fun ensureProfileLoaded(senderId: String) {
         if (_profilesMap.value.containsKey(senderId)) return
         scope.launch {
@@ -163,6 +204,12 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Fetches message history from Supabase with pagination support.
+     *
+     * @param isRefresh If `true`, resets pagination state and reloads from first page.
+     * @param currentUserId Optional ID of the currently logged-in user to mark messages as read.
+     */
     suspend fun loadMessages(isRefresh: Boolean = false, currentUserId: String? = null) {
         if (_isLoading.value || (!canLoadMore && !isRefresh)) return
         _isLoading.value = true
@@ -219,6 +266,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Loads read receipt records for the specified list of message IDs.
+     */
     suspend fun loadReadReceipts(messageIds: List<String>) {
         if (messageIds.isEmpty()) return
         try {
@@ -238,6 +288,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Inserts read receipts for unread messages on behalf of [currentUserId].
+     */
     suspend fun markMessagesAsRead(currentUserId: String) {
         val unreadMessageIds = _messages.value.filter { msg ->
             val existing = _readReceipts.value[msg.id] ?: emptyList()
@@ -266,6 +319,12 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * Sends a new chat message to Supabase.
+     *
+     * @param content Text body of the message.
+     * @param senderId User ID of the message sender.
+     */
     suspend fun sendMessage(content: String, senderId: String) {
         val now = Clock.System.now().toString()
         val newMessage = Message(

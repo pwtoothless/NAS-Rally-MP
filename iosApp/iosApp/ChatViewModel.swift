@@ -2,6 +2,7 @@ import SwiftUI
 import Supabase
 import Combine
 
+/// ViewModel managing native iOS chat messaging, real-time channels, read receipts, and member profile caches.
 @MainActor
 class ChatViewModel: ObservableObject {
     @Published var messages: [Message] = []

@@ -41,6 +41,7 @@ extension PersonInfo {
     }
 }
 
+/// Model representing user profile data in native Swift codebase.
 struct PersonInfo: Identifiable {
     var id: UUID
     var name: String

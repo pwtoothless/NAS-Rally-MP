@@ -2,6 +2,9 @@ package com.nasrally.nasrally
 
 import kotlinx.browser.localStorage
 
+/**
+ * JS Web actual preference cache implementation backed by [localStorage].
+ */
 actual object LocalCache {
     actual fun getString(key: String): String? {
         return localStorage.getItem(key)

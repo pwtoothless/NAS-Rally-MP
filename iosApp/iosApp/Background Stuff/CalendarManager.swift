@@ -7,6 +7,7 @@ import Foundation
 import EventKit
 import UIKit
 
+/// EventKit wrapper for adding rally events to native iOS System Calendar.
 class CalendarManager {
     static let shared = CalendarManager()
     private let eventStore = EKEventStore()

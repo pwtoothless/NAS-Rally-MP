@@ -6,6 +6,7 @@
 import Foundation
 import Supabase
 
+/// Global Supabase client instance configured with API URL and publishable key.
 let supabase = SupabaseClient(
     supabaseURL: URL(string: "https://api-nas-rally.mayflower-paradise.us")!,
     supabaseKey: "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"

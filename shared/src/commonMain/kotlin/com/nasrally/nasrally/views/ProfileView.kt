@@ -44,6 +44,12 @@ import com.nasrally.nasrally.getProfileImageURL
 import com.nasrally.nasrally.updateProfile
 import kotlinx.coroutines.launch
 
+/**
+ * Displays and allows editing user profile information (name, bio, vehicle details, social handle, avatar).
+ *
+ * @param person User profile state.
+ * @param onUpdatePerson Callback invoked when user updates profile details.
+ */
 @Composable
 fun ProfileView(
     person: PersonInfo,

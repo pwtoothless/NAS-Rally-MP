@@ -2,6 +2,9 @@ package com.nasrally.nasrally
 
 import platform.Foundation.NSUserDefaults
 
+/**
+ * iOS actual preference cache implementation backed by [NSUserDefaults.standardUserDefaults].
+ */
 actual object LocalCache {
     private val defaults = NSUserDefaults.standardUserDefaults
 

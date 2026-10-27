@@ -55,6 +55,13 @@ sealed class SettingsSubScreen {
     object ID : SettingsSubScreen()
 }
 
+/**
+ * User application settings screen supporting theme customization, profile editing, ID uploads, logout, and account deletion.
+ *
+ * @param person Current user profile.
+ * @param onUpdatePerson Callback invoked when user profile is updated.
+ * @param onLogout Callback invoked when user logs out.
+ */
 @Composable
 fun SettingsView(
     person: PersonInfo,

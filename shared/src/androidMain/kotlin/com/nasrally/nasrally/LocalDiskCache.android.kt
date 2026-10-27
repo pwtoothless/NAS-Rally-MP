@@ -3,6 +3,9 @@ package com.nasrally.nasrally
 import android.app.Application
 import java.io.File
 
+/**
+ * Android actual disk file cache implementation storing byte arrays inside application cache directory.
+ */
 actual object LocalDiskCache {
     private fun getCacheDir(): File {
         val app = try {

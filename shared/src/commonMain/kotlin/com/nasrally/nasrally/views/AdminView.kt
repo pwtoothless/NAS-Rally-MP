@@ -105,6 +105,11 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.launch
 
+/**
+ * Administrative panel managing user profiles, rally creation, role assignments, user join approvals, and ID verification.
+ *
+ * @param person Admin user profile.
+ */
 @OptIn(ExperimentalUuidApi::class)
 @Composable
 fun AdminView(person: PersonInfo) {

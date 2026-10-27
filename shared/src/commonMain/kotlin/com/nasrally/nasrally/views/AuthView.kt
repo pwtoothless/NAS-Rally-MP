@@ -48,6 +48,11 @@ import com.nasrally.nasrally.login
 import com.nasrally.nasrally.signup
 import kotlinx.coroutines.launch
 
+/**
+ * Authentication screen managing user sign-in and account registration.
+ *
+ * @param onLoginSuccess Callback triggered when user successfully logs in.
+ */
 @Composable
 fun AuthView(onLoginSuccess: (PersonInfo) -> Unit) {
     var isSignUpMode by remember { mutableStateOf(false) }

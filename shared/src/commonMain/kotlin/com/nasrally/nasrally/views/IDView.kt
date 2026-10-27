@@ -56,6 +56,9 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Card frame preview showing captured or uploaded ID document image bytes.
+ */
 @Composable
 fun IDCardPreview(imageBytes: ByteArray?) {
     Box(

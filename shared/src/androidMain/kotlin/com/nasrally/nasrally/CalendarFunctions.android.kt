@@ -4,6 +4,11 @@ import android.app.Application
 import android.content.Intent
 import android.provider.CalendarContract
 
+/**
+ * Android actual calendar manager implementation.
+ *
+ * Launches an [Intent.ACTION_INSERT] intent to add events to the native Android System Calendar via [CalendarContract].
+ */
 actual object CalendarManager {
     actual fun addEventToCalendar(event: RallyCalendarEvent) {
         try {

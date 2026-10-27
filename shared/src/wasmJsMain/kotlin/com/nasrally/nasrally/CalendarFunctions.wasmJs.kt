@@ -22,6 +22,9 @@ import kotlin.js.ExperimentalWasmJsInterop
 """)
 private external fun jsDownloadIcsFile(filename: String, content: String)
 
+/**
+ * Wasm/JS Web actual calendar manager implementation invoking external JS function to download .ics files.
+ */
 actual object CalendarManager {
     @OptIn(ExperimentalWasmJsInterop::class)
     actual fun addEventToCalendar(event: RallyCalendarEvent) {

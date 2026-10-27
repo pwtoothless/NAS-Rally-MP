@@ -63,6 +63,11 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.launch
 
+/**
+ * Group chat list and message messaging interface.
+ *
+ * @param person Current user profile.
+ */
 @Composable
 fun ChatView(person: PersonInfo) {
     var availableGroups by remember { mutableStateOf<List<GroupRow>>(emptyList()) }

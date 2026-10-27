@@ -10,6 +10,9 @@ import org.w3c.dom.HTMLInputElement
 import org.w3c.files.FileReader
 import org.w3c.files.get
 
+/**
+ * JS Web image picker implementation using DOM `<input type="file">` element.
+ */
 @Composable
 actual fun rememberImagePicker(
     source: ImageSource,

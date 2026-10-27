@@ -1,5 +1,8 @@
 package com.nasrally.nasrally
 
+/**
+ * Wasm/JS Web actual disk cache implementation backed by in-memory storage map.
+ */
 actual object LocalDiskCache {
     private val memoryCache = mutableMapOf<String, ByteArray>()
 
