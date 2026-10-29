@@ -353,10 +353,8 @@ fun MessageThreadView(
         selectedMessageForReceipts?.let { message ->
             val receipts = readReceipts[message.id] ?: emptyList()
             ReadReceiptsDialog(
-                message = message,
                 readReceipts = receipts,
                 groupMembers = groupMembers,
-                profilesMap = profilesMap,
                 onDismiss = { selectedMessageForReceipts = null },
                 onSelectUser = { user ->
                     selectedProfileForSheet = user
@@ -383,6 +381,18 @@ fun MessageBubble(
 
     val readCount = remember(msgReceipts) {
         msgReceipts.map { it.userId }.toSet().size
+    }
+
+    val formattedTime = remember(message.createdAt) {
+        if (message.createdAt.contains("T")) {
+            val parts = message.createdAt.split("T")
+            if (parts.size >= 2) {
+                val timePart = parts[1].take(5)
+                "${parts[0].takeLast(5)} $timePart"
+            } else message.createdAt.take(16).replace("T", " ")
+        } else {
+            message.createdAt.take(16)
+        }
     }
 
     Row(
@@ -435,50 +445,57 @@ fun MessageBubble(
             }
         }
 
-        // Message Bubble
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
-                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
-            ),
-            color = if (isCurrentUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        // Message Content + Time & Read Receipt underneath
+        Column(
+            horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start,
             modifier = Modifier.padding(horizontal = 4.dp)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            // Text Bubble
+            Surface(
+                shape = RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                    bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+                ),
+                color = if (isCurrentUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            ) {
                 Text(
                     text = message.content,
-                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Time + Read Receipt Indicator Underneath
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                Text(
+                    text = formattedTime,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Read Receipt Indicator: e.g. "3/5"
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    modifier = Modifier.clickable { onReceiptClick() }
                 ) {
                     Text(
-                        text = message.createdAt.take(16).replace("T", " "),
+                        text = "$readCount/${maxOf(totalMembers, 1)}",
                         fontSize = 10.sp,
-                        color = (if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant).copy(alpha = 0.7f)
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Read Receipt Indicator: e.g. "3/5"
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = (if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary).copy(alpha = 0.2f),
-                        modifier = Modifier.clickable { onReceiptClick() }
-                    ) {
-                        Text(
-                            text = "$readCount/$totalMembers",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isCurrentUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
                 }
             }
         }
@@ -487,10 +504,8 @@ fun MessageBubble(
 
 @Composable
 fun ReadReceiptsDialog(
-    message: Message,
     readReceipts: List<ReadReceipt>,
     groupMembers: List<PersonInfo>,
-    profilesMap: Map<String, PersonInfo>,
     onDismiss: () -> Unit,
     onSelectUser: (PersonInfo) -> Unit
 ) {

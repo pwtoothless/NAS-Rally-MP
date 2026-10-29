@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -122,7 +123,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
 
                 val membersList = profileRows.map { it.toPersonInfo() }
                 _groupMembers.value = membersList
-                _profilesMap.value = membersList.associateBy { it.id }
+                _profilesMap.update { current ->
+                    current + membersList.associateBy { it.id }
+                }
             }
         } catch (e: Exception) {
             println("Error loading group members: ${e.message}")
@@ -144,13 +147,15 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         scope.launch(Dispatchers.Default) {
             changeFlow.collect { action ->
                 val newMessage = action.decodeRecord<Message>()
-                val current = _messages.value.toMutableList()
-                if (current.none { it.id == newMessage.id }) {
-                    current.add(0, newMessage)
-                    _messages.value = current
-                    saveCachedMessages(current)
-                    ensureProfileLoaded(newMessage.senderId)
+                _messages.update { current ->
+                    if (current.none { it.id == newMessage.id }) {
+                        val updated = current.toMutableList()
+                        updated.add(0, newMessage)
+                        saveCachedMessages(updated)
+                        updated
+                    } else current
                 }
+                ensureProfileLoaded(newMessage.senderId)
             }
         }
         scope.launch { channel.subscribe() }
@@ -166,12 +171,14 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
             receiptsFlow.collect { action ->
                 try {
                     val receipt = action.decodeRecord<ReadReceipt>()
-                    val currentMap = _readReceipts.value.toMutableMap()
-                    val list = currentMap[receipt.messageId]?.toMutableList() ?: mutableListOf()
-                    if (list.none { it.userId == receipt.userId }) {
-                        list.add(receipt)
-                        currentMap[receipt.messageId] = list
-                        _readReceipts.value = currentMap
+                    _readReceipts.update { currentMap ->
+                        val updatedMap = currentMap.toMutableMap()
+                        val list = updatedMap[receipt.messageId]?.toMutableList() ?: mutableListOf()
+                        if (list.none { it.userId == receipt.userId }) {
+                            list.add(receipt)
+                            updatedMap[receipt.messageId] = list
+                        }
+                        updatedMap
                     }
                 } catch (e: Exception) {
                     println("Error parsing read receipt realtime event: ${e.message}")
@@ -194,9 +201,7 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
                     }.decodeList()
                 val person = rows.firstOrNull()?.toPersonInfo()
                 if (person != null) {
-                    val updated = _profilesMap.value.toMutableMap()
-                    updated[senderId] = person
-                    _profilesMap.value = updated
+                    _profilesMap.update { current -> current + (senderId to person) }
                 }
             } catch (e: Exception) {
                 println("Error fetching profile for $senderId: ${e.message}")
@@ -228,22 +233,26 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
 
             if (fetched.size < pageSize) canLoadMore = false
 
-            val current = if (isRefresh) mutableListOf() else _messages.value.toMutableList()
-            val existingIds = current.map { it.id }.toSet()
-            val newUnique = fetched.filter { it.id !in existingIds }
-            current.addAll(newUnique)
+            var updatedList: List<Message> = emptyList()
+            _messages.update { current ->
+                val list = if (isRefresh) mutableListOf() else current.toMutableList()
+                val existingIds = list.map { it.id }.toSet()
+                val newUnique = fetched.filter { it.id !in existingIds }
+                list.addAll(newUnique)
+                updatedList = list
+                list
+            }
 
-            _messages.value = current
-            saveCachedMessages(current)
+            saveCachedMessages(updatedList)
             currentPage++
 
-            val messageIds = current.map { it.id }
+            val messageIds = updatedList.map { it.id }
             if (messageIds.isNotEmpty()) {
                 loadReadReceipts(messageIds)
             }
 
             // Ensure profiles are loaded for senders
-            val senderIds = current.map { it.senderId }.distinct()
+            val senderIds = updatedList.map { it.senderId }.distinct()
             val missingSenderIds = senderIds.filter { !profilesMap.value.containsKey(it) }
             if (missingSenderIds.isNotEmpty()) {
                 val missingRows: List<SupabasePersonRow> = supabase.from("profiles")
@@ -251,9 +260,9 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
                         filter { isIn("id", missingSenderIds) }
                     }.decodeList()
                 val newProfiles = missingRows.map { it.toPersonInfo() }
-                val updatedMap = _profilesMap.value.toMutableMap()
-                newProfiles.forEach { updatedMap[it.id] = it }
-                _profilesMap.value = updatedMap
+                _profilesMap.update { current ->
+                    current + newProfiles.associateBy { it.id }
+                }
             }
 
             if (currentUserId != null) {
@@ -278,11 +287,13 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
                 }.decodeList()
 
             val map = receipts.groupBy { it.messageId }
-            val currentMap = _readReceipts.value.toMutableMap()
-            map.forEach { (msgId, list) ->
-                currentMap[msgId] = list
+            _readReceipts.update { currentMap ->
+                val updated = currentMap.toMutableMap()
+                map.forEach { (msgId, list) ->
+                    updated[msgId] = list
+                }
+                updated
             }
-            _readReceipts.value = currentMap
         } catch (e: Exception) {
             println("Error fetching read receipts: ${e.message}")
         }
@@ -302,15 +313,17 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
         val now = Clock.System.now().toString()
         val newReceipts = unreadMessageIds.map { ReadReceiptInsert(it, currentUserId, now) }
 
-        val currentMap = _readReceipts.value.toMutableMap()
-        for (msgId in unreadMessageIds) {
-            val list = currentMap[msgId]?.toMutableList() ?: mutableListOf()
-            if (list.none { it.userId == currentUserId }) {
-                list.add(ReadReceipt(msgId, currentUserId, now))
-                currentMap[msgId] = list
+        _readReceipts.update { currentMap ->
+            val updated = currentMap.toMutableMap()
+            for (msgId in unreadMessageIds) {
+                val list = updated[msgId]?.toMutableList() ?: mutableListOf()
+                if (list.none { it.userId == currentUserId }) {
+                    list.add(ReadReceipt(msgId, currentUserId, now))
+                    updated[msgId] = list
+                }
             }
+            updated
         }
-        _readReceipts.value = currentMap
 
         try {
             supabase.from("read_receipts").upsert(newReceipts)
@@ -335,23 +348,30 @@ class ChatViewModel(val groupId: String, private val scope: CoroutineScope) {
             createdAt = now
         )
 
-        val current = _messages.value.toMutableList()
-        current.add(0, newMessage)
-        _messages.value = current
-        saveCachedMessages(current)
+        _messages.update { current ->
+            val updated = current.toMutableList()
+            updated.add(0, newMessage)
+            saveCachedMessages(updated)
+            updated
+        }
 
         // Sender automatically reads their own message
-        val currentReceipts = _readReceipts.value.toMutableMap()
-        val receiptList = mutableListOf(ReadReceipt(newMessage.id, senderId, now))
-        currentReceipts[newMessage.id] = receiptList
-        _readReceipts.value = currentReceipts
+        _readReceipts.update { currentMap ->
+            val updated = currentMap.toMutableMap()
+            val receiptList = mutableListOf(ReadReceipt(newMessage.id, senderId, now))
+            updated[newMessage.id] = receiptList
+            updated
+        }
 
         try {
             supabase.from("messages").insert(newMessage)
             supabase.from("read_receipts").upsert(ReadReceiptInsert(newMessage.id, senderId, now))
-        } catch (e: Exception) {
-            _messages.value = _messages.value.filter { it.id != newMessage.id }
-            saveCachedMessages(_messages.value)
+        } catch (_: Exception) {
+            _messages.update { current ->
+                val updated = current.filter { it.id != newMessage.id }
+                saveCachedMessages(updated)
+                updated
+            }
         }
     }
 }

@@ -308,13 +308,13 @@ func updateProfile(person: PersonInfo) async throws {
 func getProfileImageURL(for userID: UUID) throws -> URL {
     return try supabase.storage
         .from("Profile Pictures")
-        .getPublicURL(path: userID.uuidString + "/images/profile.jpg")
+        .getPublicURL(path: userID.uuidString.uppercased() + "/images/profile.jpg")
 }
 
 func fetchUserIDImageData(for userID: UUID) async throws -> Data {
     return try await supabase.storage
         .from("User-IDs")
-        .download(path: userID.uuidString + "/userid.png")
+        .download(path: userID.uuidString.uppercased() + "/userid.png")
 }
 
 func getRallyImageURL(for name: String) throws -> URL {
@@ -356,7 +356,7 @@ func getCachedRallyLogoData(for name: String) async -> Data? {
 }
 
 func getCachedProfileImageData(for userID: UUID) async -> Data? {
-    let key = "profile_\(userID.uuidString).jpg"
+    let key = "profile_\(userID.uuidString.uppercased()).jpg"
     if let cached = CacheManager.shared.getData(forKey: key), !cached.isEmpty {
         return cached
     }
@@ -377,8 +377,8 @@ func getCachedProfileImageData(for userID: UUID) async -> Data? {
 }
 
 func invalidateCachedProfileImage(for userID: UUID) {
-    MemoryImageCache.shared.removeImage(forKey: "profile_\(userID.uuidString)")
-    CacheManager.shared.removeData(forKey: "profile_\(userID.uuidString).jpg")
+    MemoryImageCache.shared.removeImage(forKey: "profile_\(userID.uuidString.uppercased())")
+    CacheManager.shared.removeData(forKey: "profile_\(userID.uuidString.uppercased()).jpg")
 }
 
 func getCachedUserIDImageData(for userID: UUID, currentUser: PersonInfo) async -> Data? {

@@ -1,6 +1,8 @@
 package com.nasrally.nasrally
 
 import androidx.compose.ui.graphics.ImageBitmap
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -8,7 +10,6 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.rpc
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
@@ -23,7 +24,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.util.toUpperCasePreservingASCIIRules
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -87,7 +87,7 @@ suspend fun loadPersonInfo(userId: String): PersonInfo? {
                     }
                 }
                 .decodeList<ParticipantRow>()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
 
@@ -105,7 +105,7 @@ suspend fun loadPersonInfo(userId: String): PersonInfo? {
                     }
                     .decodeList<RallyNameRow>()
                     .map { it.name }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 emptyList()
             }
         } else {
@@ -142,7 +142,7 @@ suspend fun loadPersonInfoOrCreateDefault(userId: String, name: String): PersonI
     return try {
         supabase.from("profiles").upsert(newPerson)
         loadPersonInfo(userId) ?: PersonInfo(id = userId, name = name)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         PersonInfo(id = userId, name = name)
     }
 }
@@ -310,10 +310,10 @@ suspend fun updateProfile(person: PersonInfo) {
 /**
  * Obtains public HTTP URL for user profile picture in Supabase Storage.
  */
-suspend fun getProfileImageURL(userId: String): String? {
+fun getProfileImageURL(userId: String): String? {
     if (userId.isBlank()) return null
     return try {
-        supabase.storage.from("Profile Pictures").publicUrl("$userId".toUpperCasePreservingASCIIRules()+"/images/profile.jpg")
+        supabase.storage.from("Profile Pictures").publicUrl("${userId.uppercase()}/images/profile.jpg")
     } catch (e: Exception) {
         println("Error getting public URL for profile picture: ${e.message}")
         null
@@ -348,7 +348,7 @@ suspend fun fetchUserWaivers(userId: String): UserWaiversResult {
                     }
                 }
                 .decodeList<SignedWaiverRow>()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
 
@@ -433,36 +433,38 @@ suspend fun getCachedRallyLogoData(name: String): ByteArray? {
 
 /** Memory cache for decoded user profile bitmaps. */
 object ProfileImageMemoryCache {
-    private val cache = mutableMapOf<String, ImageBitmap>()
+    private val cache = MutableStateFlow<Map<String, ImageBitmap>>(emptyMap())
 
     fun get(userId: String): ImageBitmap? {
         if (userId.isBlank()) return null
-        return cache[userId]
+        return cache.value[userId]
     }
 
     fun put(userId: String, bitmap: ImageBitmap) {
         if (userId.isNotBlank()) {
-            cache[userId] = bitmap
+            cache.update { it + (userId to bitmap) }
         }
     }
 
     fun remove(userId: String) {
-        cache.remove(userId)
+        if (userId.isNotBlank()) {
+            cache.update { it - userId }
+        }
     }
 }
 
 /** Memory cache for decoded rally logo bitmaps. */
 object RallyLogoMemoryCache {
-    private val cache = mutableMapOf<String, ImageBitmap>()
+    private val cache = MutableStateFlow<Map<String, ImageBitmap>>(emptyMap())
 
     fun get(name: String): ImageBitmap? {
         if (name.isBlank()) return null
-        return cache[name]
+        return cache.value[name]
     }
 
     fun put(name: String, bitmap: ImageBitmap) {
         if (name.isNotBlank()) {
-            cache[name] = bitmap
+            cache.update { it + (name to bitmap) }
         }
     }
 }
@@ -472,21 +474,22 @@ object RallyLogoMemoryCache {
  */
 suspend fun getCachedProfileImageBitmap(userId: String): ImageBitmap? {
     if (userId.isBlank()) return null
-    ProfileImageMemoryCache.get(userId)?.let { return it }
+    val upperId = userId.uppercase()
+    ProfileImageMemoryCache.get(upperId)?.let { return it }
 
-    val key = "profile_$userId.jpg"
+    val key = "profile_$upperId.jpg"
     val cached = LocalDiskCache.getBytes(key)
     if (cached != null && cached.isNotEmpty()) {
         try {
             val bitmap = cached.decodeToImageBitmap()
-            ProfileImageMemoryCache.put(userId, bitmap)
+            ProfileImageMemoryCache.put(upperId, bitmap)
             return bitmap
         } catch (_: Exception) {
             LocalDiskCache.remove(key)
         }
     }
 
-    val url = getProfileImageURL(userId) ?: return null
+    val url = getProfileImageURL(upperId) ?: return null
     return try {
         val response = imageHttpClient.get(url)
         if (response.status.value in 200..299) {
@@ -495,16 +498,16 @@ suspend fun getCachedProfileImageBitmap(userId: String): ImageBitmap? {
                 try {
                     val bitmap = bytes.decodeToImageBitmap()
                     LocalDiskCache.saveBytes(key, bytes)
-                    ProfileImageMemoryCache.put(userId, bitmap)
+                    ProfileImageMemoryCache.put(upperId, bitmap)
                     return bitmap
                 } catch (_: Exception) {}
             }
         } else {
-            println("Profile image download returned HTTP ${response.status.value} for user $userId")
+            println("Profile image download returned HTTP ${response.status.value} for user $upperId")
         }
         null
     } catch (e: Exception) {
-        println("Error downloading profile image ($userId): ${e.message}")
+        println("Error downloading profile image ($upperId): ${e.message}")
         null
     }
 }
@@ -512,9 +515,11 @@ suspend fun getCachedProfileImageBitmap(userId: String): ImageBitmap? {
 /**
  * Downloads profile image raw byte array with local disk caching.
  */
+@Suppress("UNUSED")
 suspend fun getCachedProfileImageData(userId: String): ByteArray? {
     if (userId.isBlank()) return null
-    val key = "profile_$userId.jpg"
+    val upperId = userId.uppercase()
+    val key = "profile_$upperId.jpg"
     val cached = LocalDiskCache.getBytes(key)
     if (cached != null && cached.isNotEmpty()) {
         try {
@@ -525,7 +530,7 @@ suspend fun getCachedProfileImageData(userId: String): ByteArray? {
         }
     }
 
-    val url = getProfileImageURL(userId) ?: return null
+    val url = getProfileImageURL(upperId) ?: return null
     return try {
         val response = imageHttpClient.get(url)
         if (response.status.value in 200..299) {
@@ -538,11 +543,11 @@ suspend fun getCachedProfileImageData(userId: String): ByteArray? {
                 } catch (_: Exception) {}
             }
         } else {
-            println("Profile image download returned HTTP ${response.status.value} for user $userId")
+            println("Profile image download returned HTTP ${response.status.value} for user $upperId")
         }
         null
     } catch (e: Exception) {
-        println("Error downloading profile image ($userId): ${e.message}")
+        println("Error downloading profile image ($upperId): ${e.message}")
         null
     }
 }
@@ -550,10 +555,12 @@ suspend fun getCachedProfileImageData(userId: String): ByteArray? {
 /**
  * Clears memory and disk cache entries for [userId]'s profile picture.
  */
+@Suppress("UNUSED")
 fun invalidateCachedProfileImage(userId: String) {
     if (userId.isNotBlank()) {
-        ProfileImageMemoryCache.remove(userId)
-        LocalDiskCache.remove("profile_$userId.jpg")
+        val upperId = userId.uppercase()
+        ProfileImageMemoryCache.remove(upperId)
+        LocalDiskCache.remove("profile_$upperId.jpg")
     }
 }
 
@@ -562,13 +569,14 @@ fun invalidateCachedProfileImage(userId: String) {
  */
 suspend fun getCachedUserIDImageData(userId: String, isAdmin: Boolean): ByteArray? {
     if (!isAdmin || userId.isBlank()) return null
-    val key = "id_${userId.toUpperCasePreservingASCIIRules()}.png"
+    val upperId = userId.uppercase()
+    val key = "id_$upperId.png"
     val cached = LocalDiskCache.getBytes(key)
     if (cached != null && cached.isNotEmpty()) {
         return cached
     }
 
-    val downloaded = fetchUserIDImageData(userId)
+    val downloaded = fetchUserIDImageData(upperId)
     if (downloaded != null && downloaded.isNotEmpty()) {
         LocalDiskCache.saveBytes(key, downloaded)
     }
@@ -578,6 +586,7 @@ suspend fun getCachedUserIDImageData(userId: String, isAdmin: Boolean): ByteArra
 /**
  * Loads sensitive administrative records from `sensitiveInfo` table.
  */
+@Suppress("UNUSED")
 suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
     return try {
         val rows = supabase.from("sensitiveInfo")
@@ -593,6 +602,7 @@ suspend fun loadSensitiveInfo(): SensitiveInfoRow? {
 /**
  * Upserts sensitive administrative records to `sensitiveInfo` table.
  */
+@Suppress("UNUSED")
 suspend fun saveSensitiveInfo(row: SensitiveInfoRow) {
     supabase.from("sensitiveInfo").upsert(row)
 }

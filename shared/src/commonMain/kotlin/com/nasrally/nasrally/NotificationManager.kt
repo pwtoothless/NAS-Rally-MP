@@ -3,6 +3,7 @@ package com.nasrally.nasrally
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.time.Clock
 
 /**
@@ -29,8 +30,8 @@ object NotificationManager {
     private const val DEFAULT_COOLDOWN_MILLIS = 20_000L // 20 seconds rate limit
     private const val IN_APP_BANNER_THRESHOLD = 10 // Trigger banner every 10-20 messages
 
-    private val lastNotificationTimestamp = mutableMapOf<String, Long>()
-    private val inAppMessageCounts = mutableMapOf<String, Int>()
+    private val lastNotificationTimestamp = MutableStateFlow<Map<String, Long>>(emptyMap())
+    private val inAppMessageCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
 
     /**
      * Whether the application is currently actively in the foreground.
@@ -47,6 +48,7 @@ object NotificationManager {
     /**
      * Retrieves the current banner data payload.
      */
+    @Suppress("UNUSED")
     val currentBannerData: InAppBannerData? get() = _inAppBannerState.value
 
     private var onBannerDataChangedListener: ((InAppBannerData?) -> Unit)? = null
@@ -54,6 +56,7 @@ object NotificationManager {
     /**
      * Registers a listener callback invoked when banner state changes.
      */
+    @Suppress("UNUSED")
     fun setOnBannerDataChangedListener(listener: ((InAppBannerData?) -> Unit)?) {
         onBannerDataChangedListener = listener
         listener?.invoke(_inAppBannerState.value)
@@ -69,15 +72,20 @@ object NotificationManager {
      */
     fun shouldAllowOutOfAppNotification(groupId: String, cooldownMillis: Long = DEFAULT_COOLDOWN_MILLIS): Boolean {
         val now = Clock.System.now().toEpochMilliseconds()
-        val lastTime = lastNotificationTimestamp[groupId] ?: 0L
-        val globalLastTime = lastNotificationTimestamp["_global_"] ?: 0L
+        var allowed = false
+        lastNotificationTimestamp.update { current ->
+            val lastTime = current[groupId] ?: 0L
+            val globalLastTime = current["_global_"] ?: 0L
 
-        if (now - lastTime >= cooldownMillis && now - globalLastTime >= (cooldownMillis / 2)) {
-            lastNotificationTimestamp[groupId] = now
-            lastNotificationTimestamp["_global_"] = now
-            return true
+            if (now - lastTime >= cooldownMillis && now - globalLastTime >= (cooldownMillis / 2)) {
+                allowed = true
+                current + (groupId to now) + ("_global_" to now)
+            } else {
+                allowed = false
+                current
+            }
         }
-        return false
+        return allowed
     }
 
     /**
@@ -101,21 +109,29 @@ object NotificationManager {
             return
         }
 
-        val newCount = (inAppMessageCounts[groupId] ?: 0) + 1
-        inAppMessageCounts[groupId] = newCount
+        var shouldTriggerBanner = false
+        var count = 0
+        inAppMessageCounts.update { current ->
+            val newCount = (current[groupId] ?: 0) + 1
+            count = newCount
+            if (newCount >= IN_APP_BANNER_THRESHOLD) {
+                shouldTriggerBanner = true
+                current + (groupId to 0)
+            } else {
+                current + (groupId to newCount)
+            }
+        }
 
-        if (newCount >= IN_APP_BANNER_THRESHOLD) {
+        if (shouldTriggerBanner) {
             val banner = InAppBannerData(
                 groupId = groupId,
                 groupName = groupName.ifBlank { "Group Chat" },
-                unreadCount = newCount,
+                unreadCount = count,
                 latestSenderName = senderName.ifBlank { "Someone" },
                 latestMessageText = text
             )
             _inAppBannerState.value = banner
             onBannerDataChangedListener?.invoke(banner)
-            // Reset counter after triggering banner
-            inAppMessageCounts[groupId] = 0
         }
     }
 
@@ -130,8 +146,11 @@ object NotificationManager {
     /**
      * Resets accumulated unread message count for [groupId] and dismisses matching banners.
      */
+    @Suppress("UNUSED")
     fun resetGroupMessageCount(groupId: String) {
-        inAppMessageCounts[groupId] = 0
+        inAppMessageCounts.update { current ->
+            current + (groupId to 0)
+        }
         if (_inAppBannerState.value?.groupId == groupId) {
             dismissInAppBanner()
         }
