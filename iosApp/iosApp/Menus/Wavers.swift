@@ -32,7 +32,7 @@ struct WaversView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
                 
-                // --- TOP VIEW PICKER (LIKE ADMIN VIEW) ---
+                // --- TOP VIEW PICKER ---
                 HStack(spacing: 0) {
                     tabButton(title: "Pending (\(pendingWaivers.count))", index: 0)
                     tabButton(title: "Signed (\(signedWaivers.count))", index: 1)

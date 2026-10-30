@@ -88,7 +88,7 @@ struct ContentView: View {
             UITabBar.appearance().tintColor = UIColor(person.themeColor)
             observeInAppBanner()
         }
-        .onChange(of: person.theme) { _ in
+        .onChange(of: person.theme) {
             UITabBar.appearance().tintColor = UIColor(person.themeColor)
         }
     }

@@ -8,16 +8,6 @@ import FirebaseCore
 import FirebaseMessaging
 import Shared
 
-//
-//  iOSApp.swift
-//  NAS Rally
-//
-
-import SwiftUI
-import FirebaseCore
-import FirebaseMessaging
-import Shared
-
 /// Main application delegate handling Firebase initialization and push notification registration.
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
     func application(_ application: UIApplication,

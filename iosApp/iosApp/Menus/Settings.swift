@@ -47,7 +47,7 @@ struct SettingsView: View {
                             }
                             .padding(.leading, 8)
                             .pickerStyle(.menu)
-                            .onChange(of: person.theme) { newTheme in
+                            .onChange(of: person.theme) { _, newTheme in
                                 Task {
                                     await updateTheme(personID: person.id, theme: newTheme)
                                 }

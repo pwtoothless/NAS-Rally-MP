@@ -84,7 +84,7 @@ struct AdminView: View {
             }
             .padding(.horizontal, 16)
                 .onAppear() {
-                    print(" penis chance: \(penisChance)")
+                    //print(" penis chance: \(penisChance)")
                 }
             
             HStack(spacing: 0) {

@@ -112,10 +112,6 @@ struct CalendarEvent {
     var peopleGoing: Int
 }
 
-func saveCalendarEvent(_ event: CalendarEvent) {
-    // Will take in event with info, then format to an event making call
-}
-
 struct Message: Codable, Identifiable, Equatable {
     let id: UUID
     let groupId: UUID
