@@ -17,3 +17,6 @@ This app supports the following platforms:
 - Web (Please use repository link in the top right)
 - iOS (TestFlight Soon)
 - Android (APK found in Releases)
+
+# Current Progress
+[![PathToShip Score: 80/100](https://pathtoship.com/api/badge/6d14eabb-19b7-4849-9a78-473cedf8952e)](https://pathtoship.com/results/6d14eabb-19b7-4849-9a78-473cedf8952e)
