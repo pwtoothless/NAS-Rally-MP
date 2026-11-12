@@ -26,8 +26,8 @@ RUN ./gradlew :webApp:wasmJsBrowserDistribution --no-daemon
 # Stage 2: Serve the static files with Nginx
 FROM nginx:alpine
 
-# Reconfigure Nginx to listen on port 8089 instead of the default port 80
-RUN sed -i 's/listen  *80;/listen 8089;/g' /etc/nginx/conf.d/default.conf
+# Copy custom nginx configuration with CSP and cache control
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy the generated static files into the Nginx HTML directory
 COPY --from=builder /app/webApp/build/dist/wasmJs/productionExecutable /usr/share/nginx/html

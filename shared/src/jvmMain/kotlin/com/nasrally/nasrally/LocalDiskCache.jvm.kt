@@ -4,6 +4,7 @@ import java.io.File
 
 /**
  * JVM Desktop actual disk cache implementation writing data files to temporary directory.
+ * Includes cache versioning for automatic invalidation on deployment.
  */
 actual object LocalDiskCache {
     private fun getCacheDir(): File {
@@ -15,8 +16,8 @@ actual object LocalDiskCache {
         return dir
     }
 
-    private fun getFile(key: String): File = File(getCacheDir(), key)
-    private fun getMetaFile(key: String): File = File(getCacheDir(), "$key.meta")
+    private fun getFile(key: String): File = File(getCacheDir(), CacheVersion.versionedKey(key))
+    private fun getMetaFile(key: String): File = File(getCacheDir(), "${CacheVersion.versionedKey(key)}.meta")
 
     actual fun getBytes(key: String): ByteArray? {
         val file = getFile(key)

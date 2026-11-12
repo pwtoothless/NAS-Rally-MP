@@ -1,21 +1,29 @@
 import Foundation
 import SwiftUI
 
+// Cache version for invalidation - must match shared CacheVersion.CURRENT
+// Update this when deploying breaking changes to invalidate all caches
+let cacheVersion = "v1.0.0"
+
+private func versionedKey(_ key: String) -> String {
+    return "\(cacheVersion)_\(key)"
+}
+
 /// In-memory image cache singleton wrapper around `NSCache`.
 final class MemoryImageCache: @unchecked Sendable {
     static let shared = MemoryImageCache()
     private let cache = NSCache<NSString, UIImage>()
 
     func image(forKey key: String) -> UIImage? {
-        return cache.object(forKey: key as NSString)
+        return cache.object(forKey: versionedKey(key) as NSString)
     }
 
     func setImage(_ image: UIImage, forKey key: String) {
-        cache.setObject(image, forKey: key as NSString)
+        cache.setObject(image, forKey: versionedKey(key) as NSString)
     }
 
     func removeImage(forKey key: String) {
-        cache.removeObject(forKey: key as NSString)
+        cache.removeObject(forKey: versionedKey(key) as NSString)
     }
 }
 
@@ -34,11 +42,11 @@ final class CacheManager: Sendable {
     }
 
     private func fileURL(forKey key: String) -> URL {
-        return cacheDirectoryURL.appendingPathComponent(key)
+        return cacheDirectoryURL.appendingPathComponent(versionedKey(key))
     }
 
     private func metaURL(forKey key: String) -> URL {
-        return cacheDirectoryURL.appendingPathComponent("\(key).meta")
+        return cacheDirectoryURL.appendingPathComponent("\(versionedKey(key)).meta")
     }
 
     func getData(forKey key: String) -> Data? {
