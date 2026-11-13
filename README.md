@@ -19,4 +19,4 @@ This app supports the following platforms:
 - Android (APK found in Releases)
 
 # Current Progress
-[![PathToShip Certified: 80/100](https://pathtoship.com/api/badge/certified/ecf6b7a1-a544-4e26-a67e-1c4fff14ecb4?variant=seal)](https://pathtoship.com/certified/ecf6b7a1-a544-4e26-a67e-1c4fff14ecb4)
+[![PathToShip Certified: 91/100](https://pathtoship.com/api/badge/certified/ecf6b7a1-a544-4e26-a67e-1c4fff14ecb4?variant=seal)](https://pathtoship.com/certified/ecf6b7a1-a544-4e26-a67e-1c4fff14ecb4)
