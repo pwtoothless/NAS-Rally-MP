@@ -1,6 +1,7 @@
 package com.nasrally.nasrally
 
 import androidx.compose.ui.graphics.ImageBitmap
+import com.nasrally.nasrally.shared.BuildKonfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import io.github.jan.supabase.auth.Auth
@@ -30,12 +31,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
+
 /**
  * Main Supabase client instance configured with Auth, Postgrest, Realtime, and Storage modules.
  */
 val supabase = createSupabaseClient(
     supabaseUrl = "https://api-nas-rally.mayflower-paradise.us",
-    supabaseKey = "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"
+    supabaseKey = BuildKonfig.SERVICE_KEY
 ) {
     install(Auth)
     install(Postgrest)
