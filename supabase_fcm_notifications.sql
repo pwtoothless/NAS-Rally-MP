@@ -1,6 +1,19 @@
 -- ==============================================================================
 -- NAS Rally - FCM In-App & Out-of-App Push Notification Database Setup
 -- ==============================================================================
+--
+-- IMPORTANT: The push notification function uses a custom GUC setting 'app.push_service_token'
+-- to authenticate with the push Edge Function. This should be set to a service_role JWT
+-- in the Supabase Dashboard -> Settings -> Database -> Custom GUCs, or via SQL:
+--
+--   ALTER DATABASE postgres SET app.push_service_token = 'YOUR_SERVICE_ROLE_JWT';
+--
+-- NEVER commit service_role keys to source control. Rotate the key immediately if exposed.
+-- The service_role key belongs only in server-side environment variables — never the client bundle.
+-- Use the anon/publishable key client-side.
+--
+-- To rotate: Generate a new service_role JWT in Supabase Dashboard -> Settings -> API,
+-- then update the custom GUC setting above.
 
 -- 1. Create dedicated Queue Table for In-App Messaging & FCM Dispatch
 CREATE TABLE IF NOT EXISTS public.fcm_notifications_queue (
@@ -43,7 +56,7 @@ BEGIN
     PERFORM net.http_post(
         url := 'https://api-nas-rally.mayflower-paradise.us/functions/v1/push',
         headers := jsonb_build_object(
-            'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODAzNTU1MTUsImV4cCI6MTkzODAzNTUxNX0.iLKkNlhS25LlJLgz5IxnbYDX-wwnBQdtaWM_OJl3k7w',
+            'Authorization', 'Bearer ' || current_setting('app.push_service_token', true),
             'Content-Type', 'application/json'
         ),
         body := jsonb_build_object(

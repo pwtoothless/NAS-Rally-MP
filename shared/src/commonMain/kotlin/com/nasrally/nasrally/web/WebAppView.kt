@@ -1792,10 +1792,8 @@ fun WebChatView(personInfo: PersonInfo) {
                     selectedMessageForReceipts?.let { message ->
                         val receipts = readReceipts[message.id] ?: emptyList()
                         ReadReceiptsDialog(
-                            message = message,
                             readReceipts = receipts,
                             groupMembers = groupMembers,
-                            profilesMap = profilesMap,
                             onDismiss = { selectedMessageForReceipts = null },
                             onSelectUser = { user ->
                                 selectedProfileForSheet = user

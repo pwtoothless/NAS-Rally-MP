@@ -9,7 +9,7 @@ import Supabase
 /// Global Supabase client instance configured with API URL and publishable key.
 let supabase = SupabaseClient(
     supabaseURL: URL(string: "https://api-nas-rally.mayflower-paradise.us")!,
-    supabaseKey: "sb_publishable_xflKOJnjZKIKm7f_Ri4Bn4_7-zhLiVC"
+    supabaseKey: Bundle.main.object(forInfoDictionaryKey: "SERVICE_KEY") as? String ?? ""
 )
 
 // Helper struct for encoding dynamic values
@@ -36,7 +36,7 @@ func deleteUserAccount(userId: UUID) async {
         try await supabase.rpc("delete_user_account", params: ["target_user_id": userId.uuidString]).execute()
     } catch {
         print("RPC delete_user_account failed: \(error), attempting fallback profile update...")
-        try? await supabase.from("profiles")
+        _ = try? await supabase.from("profiles")
             .update(["privligeLevel": "Removed"])
             .eq("id", value: userId.uuidString)
             .execute()
@@ -186,7 +186,7 @@ func signup(Name: String, Email: String, Password: String) async -> AuthResult {
         let authResponse = try await supabase.auth.signUp(
             email: Email,
             password: Password,
-            data: ["name": .string(Name)]
+            data: ["name": AnyJSON.string(Name)]
         )
         
         let newPerson = NewSupabasePersonRow(
